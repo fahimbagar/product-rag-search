@@ -1,0 +1,76 @@
+services:
+  postgres:
+    build: ./docker/postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-product_rag}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-product_rag}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["/usr/local/bin/migrate"]
+    command: ["up"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-product_rag}?sslmode=disable
+      MIGRATIONS_DIR: /migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["/usr/local/bin/server"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-product_rag}?sslmode=disable
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CLAUDE_INTENT_MODEL: ${CLAUDE_INTENT_MODEL:-claude-haiku-4-5}
+      CLAUDE_ANSWER_MODEL: ${CLAUDE_ANSWER_MODEL:-claude-sonnet-5}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      HTTP_ADDR: ":8080"
+      RRF_K: ${RRF_K:-60}
+      RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K:-10}
+      FINAL_TOP_N: ${FINAL_TOP_N:-5}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-changeme}
+    ports:
+      - "8080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["/usr/local/bin/seed"]
+    command: ["--file=/seed/products.json"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-product_rag}?sslmode=disable
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    profiles: ["seed"]
+
+volumes:
+  pgdata:
