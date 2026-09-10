@@ -1,0 +1,37 @@
+{
+  "products": [
+    { "title": "Aero Runner", "description": "Lightweight everyday running shoe with breathable mesh upper and responsive foam midsole.", "category": "Running Shoes", "brand": "Aero", "price": 89.99, "attributes": { "color": "black", "waterproof": false, "weight_grams": 240, "drop_mm": 8 } },
+    { "title": "Aero Sprint", "description": "Race-day running shoe built for speed with a carbon plate and snappy toe-off.", "category": "Running Shoes", "brand": "Aero", "price": 94.99, "attributes": { "color": "red", "waterproof": false, "weight_grams": 195, "drop_mm": 6 } },
+    { "title": "TrailForge Ridge", "description": "Trail running shoe with aggressive lug outsole for loose dirt and scree.", "category": "Running Shoes", "brand": "TrailForge", "price": 109.99, "attributes": { "color": "olive", "waterproof": true, "weight_grams": 280, "drop_mm": 6 } },
+    { "title": "TrailForge Peak", "description": "High-mileage trail shoe with rock plate protection and sticky rubber grip.", "category": "Running Shoes", "brand": "TrailForge", "price": 114.99, "attributes": { "color": "grey", "waterproof": true, "weight_grams": 295, "drop_mm": 4 } },
+    { "title": "Summit Stride", "description": "Comfortable daily trainer with plush cushioning for easy recovery runs.", "category": "Running Shoes", "brand": "Summit", "price": 79.99, "attributes": { "color": "blue", "waterproof": false, "weight_grams": 260, "drop_mm": 10 } },
+    { "title": "Summit Dash", "description": "Budget-friendly running shoe with a durable knit upper and cushioned heel.", "category": "Running Shoes", "brand": "Summit", "price": 84.99, "attributes": { "color": "white", "waterproof": false, "weight_grams": 255, "drop_mm": 8 } },
+
+    { "title": "TrailForge Trekker", "description": "Waterproof hiking boot with ankle support for multi-day backpacking trips.", "category": "Hiking Boots", "brand": "TrailForge", "price": 149.99, "attributes": { "color": "brown", "waterproof": true, "weight_grams": 480, "ankle_support": "high" } },
+    { "title": "TrailForge Summit Boot", "description": "Rugged mountaineering boot with reinforced toe cap and crampon compatibility.", "category": "Hiking Boots", "brand": "TrailForge", "price": 159.99, "attributes": { "color": "black", "waterproof": true, "weight_grams": 520, "ankle_support": "high" } },
+    { "title": "Summit Ridge Boot", "description": "Mid-cut hiking boot balancing agility and ankle protection for day hikes.", "category": "Hiking Boots", "brand": "Summit", "price": 139.99, "attributes": { "color": "tan", "waterproof": true, "weight_grams": 440, "ankle_support": "mid" } },
+    { "title": "Summit Trailblazer", "description": "Lightweight hiking boot with breathable membrane for warm-weather trails.", "category": "Hiking Boots", "brand": "Summit", "price": 144.99, "attributes": { "color": "green", "waterproof": true, "weight_grams": 410, "ankle_support": "mid" } },
+    { "title": "Aero Hike Pro", "description": "Fast-hiking boot with a flexible sole for scrambling and technical terrain.", "category": "Hiking Boots", "brand": "Aero", "price": 129.99, "attributes": { "color": "grey", "waterproof": true, "weight_grams": 390, "ankle_support": "low" } },
+    { "title": "Aero Alpine", "description": "Insulated winter hiking boot rated for sub-zero temperatures.", "category": "Hiking Boots", "brand": "Aero", "price": 134.99, "attributes": { "color": "black", "waterproof": true, "weight_grams": 560, "ankle_support": "high" } },
+
+    { "title": "Pulse Air", "description": "Over-ear wireless headphones with active noise cancelling and 30-hour battery.", "category": "Wireless Headphones", "brand": "Pulse", "price": 59.99, "attributes": { "color": "black", "noise_cancelling": true, "battery_hours": 30, "wireless": true } },
+    { "title": "Pulse Bass", "description": "Bass-forward wireless headphones tuned for hip-hop and electronic music.", "category": "Wireless Headphones", "brand": "Pulse", "price": 69.99, "attributes": { "color": "red", "noise_cancelling": false, "battery_hours": 24, "wireless": true } },
+    { "title": "Vantage Sound", "description": "Balanced studio-tuned wireless headphones with foldable design for travel.", "category": "Wireless Headphones", "brand": "Vantage", "price": 79.99, "attributes": { "color": "silver", "noise_cancelling": true, "battery_hours": 28, "wireless": true } },
+    { "title": "Vantage Studio", "description": "Premium reference headphones for audio production with detachable cable.", "category": "Wireless Headphones", "brand": "Vantage", "price": 129.99, "attributes": { "color": "black", "noise_cancelling": true, "battery_hours": 40, "wireless": true } },
+    { "title": "Pulse Sport", "description": "Sweat-resistant wireless earbuds with secure ear hooks for running.", "category": "Wireless Headphones", "brand": "Pulse", "price": 54.99, "attributes": { "color": "green", "noise_cancelling": false, "battery_hours": 8, "wireless": true } },
+    { "title": "Vantage Mini", "description": "Compact on-ear wireless headphones designed for daily commuting.", "category": "Wireless Headphones", "brand": "Vantage", "price": 49.99, "attributes": { "color": "white", "noise_cancelling": false, "battery_hours": 20, "wireless": true } },
+
+    { "title": "Pulse Watch", "description": "Fitness smartwatch with heart-rate tracking and 7-day battery life.", "category": "Smartwatches", "brand": "Pulse", "price": 99.99, "attributes": { "color": "black", "water_resistant": true, "battery_days": 7, "gps": true } },
+    { "title": "Pulse Track", "description": "Entry-level smartwatch focused on step counting and sleep tracking.", "category": "Smartwatches", "brand": "Pulse", "price": 89.99, "attributes": { "color": "blue", "water_resistant": true, "battery_days": 10, "gps": false } },
+    { "title": "Vantage Time", "description": "Premium smartwatch with AMOLED display and built-in GPS for outdoor sports.", "category": "Smartwatches", "brand": "Vantage", "price": 149.99, "attributes": { "color": "silver", "water_resistant": true, "battery_days": 5, "gps": true } },
+    { "title": "Vantage Active", "description": "Rugged sports smartwatch rated for swimming and triathlon training.", "category": "Smartwatches", "brand": "Vantage", "price": 159.99, "attributes": { "color": "orange", "water_resistant": true, "battery_days": 14, "gps": true } },
+    { "title": "Pulse Fit", "description": "Slim fitness band with continuous heart-rate and stress monitoring.", "category": "Smartwatches", "brand": "Pulse", "price": 79.99, "attributes": { "color": "grey", "water_resistant": true, "battery_days": 12, "gps": false } },
+    { "title": "Vantage Chrono", "description": "Luxury hybrid smartwatch combining mechanical hands with smart notifications.", "category": "Smartwatches", "brand": "Vantage", "price": 219.99, "attributes": { "color": "gold", "water_resistant": true, "battery_days": 21, "gps": false } }
+  ],
+  "relations": [
+    { "from_index": 0, "to_index": 10, "weight": 0.8 },
+    { "from_index": 2, "to_index": 6, "weight": 0.7 },
+    { "from_index": 12, "to_index": 18, "weight": 0.9 },
+    { "from_index": 14, "to_index": 20, "weight": 0.9 }
+  ]
+}
