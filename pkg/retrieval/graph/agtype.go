@@ -1,0 +1,54 @@
+package graph
+
+import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+// Vertex is the decoded form of an agtype vertex literal, e.g.
+// `{"id": 844424930131969, "label": "Product", "properties": {...}}::vertex`.
+// Apache AGE has no official Go client, so this parsing is hand-rolled
+// against fixtures captured from a live psql session (see docker/postgres
+// validation notes).
+type Vertex struct {
+	ID         int64
+	Label      string
+	Properties map[string]any
+}
+
+func ParseVertex(raw string) (Vertex, error) {
+	body, ok := strings.CutSuffix(strings.TrimSpace(raw), "::vertex")
+	if !ok {
+		return Vertex{}, fmt.Errorf("agtype: not a vertex literal: %s", raw)
+	}
+	var v struct {
+		ID         int64          `json:"id"`
+		Label      string         `json:"label"`
+		Properties map[string]any `json:"properties"`
+	}
+	if err := json.Unmarshal([]byte(body), &v); err != nil {
+		return Vertex{}, fmt.Errorf("agtype: parse vertex: %w", err)
+	}
+	return Vertex{ID: v.ID, Label: v.Label, Properties: v.Properties}, nil
+}
+
+// ParseString parses a scalar agtype projection that is a JSON string, e.g.
+// `"abc-123"` (no ::type suffix — only vertex/edge/path literals carry one).
+func ParseString(raw string) (string, error) {
+	var s string
+	if err := json.Unmarshal([]byte(raw), &s); err != nil {
+		return "", fmt.Errorf("agtype: parse string %q: %w", raw, err)
+	}
+	return s, nil
+}
+
+// ParseInt parses a scalar agtype projection that is a bare number, e.g. `1`.
+func ParseInt(raw string) (int64, error) {
+	n, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("agtype: parse int %q: %w", raw, err)
+	}
+	return n, nil
+}
