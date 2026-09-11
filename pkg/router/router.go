@@ -16,8 +16,8 @@ func New(logger *slog.Logger, db *pgxpool.Pool, p *pipeline.Pipeline, ingester *
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", handleHealth(db))
-	mux.HandleFunc("POST /query", handleQuery(p))
-	mux.HandleFunc("POST /ingest", handleIngest(ingester, adminToken))
+	mux.HandleFunc("POST /query", handleQuery(logger, p))
+	mux.HandleFunc("POST /ingest", handleIngest(logger, ingester, adminToken))
 
 	return withMiddleware(logger, mux)
 }

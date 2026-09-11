@@ -2,6 +2,7 @@ package router
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/fahimbagar/product-rag-search/pkg/ingestion"
@@ -27,7 +28,7 @@ type ingestRequest struct {
 	Relations []ingestRelation `json:"relations"`
 }
 
-func handleIngest(ingester *ingestion.Ingester, adminToken string) http.HandlerFunc {
+func handleIngest(logger *slog.Logger, ingester *ingestion.Ingester, adminToken string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if adminToken == "" || r.Header.Get("Authorization") != "Bearer "+adminToken {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -61,6 +62,7 @@ func handleIngest(ingester *ingestion.Ingester, adminToken string) http.HandlerF
 		}
 
 		if err := ingester.Ingest(r.Context(), raw, related); err != nil {
+			logger.Error("ingest failed", "error", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
