@@ -1,12 +1,12 @@
 # RAG evaluation: what's covered, and the real gap
 
 Four evaluation/monitoring areas are implemented (`internal/metrics`,
-`../integration_tests`, Prometheus + Grafana):
+`integration_tests/`, Prometheus + Grafana):
 
-1. **Retrieval quality** — `../integration_tests`,
+1. **Retrieval quality** — `integration_tests/retrieval_eval_test.go`,
    golden query → expected product titles, scored as recall@FinalTopN
    against the real vector+fulltext+graph+RRF pipeline.
-2. **Intent classification accuracy** — `../integration_tests`,
+2. **Intent classification accuracy** — `integration_tests/intent_eval_test.go`,
    golden query → expected intent, scored as accuracy against the real
    Gemini classifier.
 3. **Citation/hallucination monitoring** — `citation_outcomes_total{outcome}`

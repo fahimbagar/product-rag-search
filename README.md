@@ -135,13 +135,13 @@ hallucinated counts, Gemini token usage, and intent classification counts.
 - Grafana: http://localhost:3000 (anonymous viewer access; auto-provisioned
   "Product RAG Search" dashboard, datasource pre-configured — no manual setup)
 
-**Offline evals** (`eval/integration_tests/`, behind the `integration` build
+**Offline evals** (`integration_tests/`, behind the `integration` build
 tag, need a live seeded Postgres + a real `GEMINI_API_KEY`):
 
 ```bash
 export DATABASE_URL='postgres://postgres:postgres@localhost:5432/product_rag?sslmode=disable'
 export GEMINI_API_KEY='...'
-go test -tags=integration ./eval/... -v
+go test -tags=integration ./integration_tests/... -v
 ```
 
 - `retrieval_eval_test.go` — golden query → expected product titles (matched

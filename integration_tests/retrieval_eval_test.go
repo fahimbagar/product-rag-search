@@ -2,7 +2,7 @@
 
 // Package integration_tests holds offline evaluation harnesses that exercise
 // the real retrieval/LLM stack (live Postgres + a real GEMINI_API_KEY), run
-// via `go test -tags=integration ./eval/...` against a seeded database
+// via `go test -tags=integration ./integration_tests/...` against a seeded database
 // (docker compose --profile seed run --rm seed).
 package integration_tests
 
