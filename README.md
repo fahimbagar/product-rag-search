@@ -1,5 +1,8 @@
 # product-rag-search
 
+[![static analysis](https://github.com/fahimbagar/product-rag-search/actions/workflows/static-analysis.yml/badge.svg)](https://github.com/fahimbagar/product-rag-search/actions/workflows/static-analysis.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Product info search with a RAG pipeline: intent classification, hybrid
 retrieval (vector + graph + full-text), Reciprocal Rank Fusion re-ranking,
 and grounded, cited answer generation.
