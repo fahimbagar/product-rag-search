@@ -180,3 +180,7 @@ Unit tests use table-driven cases with `testify/assert`
 See [docs/FUTURE-IMPROVEMENTS.md](docs/FUTURE-IMPROVEMENTS.md) — alternative
 LLM/embeddings providers (and the citation-verification tradeoff involved),
 integration tests, reranker swaps, auth hardening, and observability.
+
+## License
+
+[MIT](LICENSE)
