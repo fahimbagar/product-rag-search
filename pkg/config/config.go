@@ -10,12 +10,11 @@ import (
 type Config struct {
 	DatabaseURL string
 
-	AnthropicAPIKey   string
-	ClaudeIntentModel string
-	ClaudeAnswerModel string
-
-	OpenAIAPIKey         string
-	OpenAIEmbeddingModel string
+	GeminiAPIKey             string
+	GeminiIntentModel        string
+	GeminiAnswerModel        string
+	GeminiEmbeddingModel     string
+	GeminiEmbeddingDimension int
 
 	HTTPAddr string
 	LogLevel string
@@ -30,12 +29,10 @@ func Load() (Config, error) {
 	cfg := Config{
 		DatabaseURL: os.Getenv("DATABASE_URL"),
 
-		AnthropicAPIKey:   os.Getenv("ANTHROPIC_API_KEY"),
-		ClaudeIntentModel: getEnvDefault("CLAUDE_INTENT_MODEL", "claude-haiku-4-5"),
-		ClaudeAnswerModel: getEnvDefault("CLAUDE_ANSWER_MODEL", "claude-sonnet-5"),
-
-		OpenAIAPIKey:         os.Getenv("OPENAI_API_KEY"),
-		OpenAIEmbeddingModel: getEnvDefault("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+		GeminiAPIKey:         os.Getenv("GEMINI_API_KEY"),
+		GeminiIntentModel:    getEnvDefault("GEMINI_INTENT_MODEL", "gemini-3.5-flash-lite"),
+		GeminiAnswerModel:    getEnvDefault("GEMINI_ANSWER_MODEL", "gemini-3.8-flash"),
+		GeminiEmbeddingModel: getEnvDefault("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"),
 
 		HTTPAddr: getEnvDefault("HTTP_ADDR", ":8080"),
 		LogLevel: getEnvDefault("LOG_LEVEL", "info"),
@@ -51,6 +48,9 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	if cfg.FinalTopN, err = getEnvIntDefault("FINAL_TOP_N", 5); err != nil {
+		return Config{}, err
+	}
+	if cfg.GeminiEmbeddingDimension, err = getEnvIntDefault("GEMINI_EMBEDDING_DIMENSION", 1536); err != nil {
 		return Config{}, err
 	}
 

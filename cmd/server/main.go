@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/fahimbagar/product-rag-search/pkg/config"
-	"github.com/fahimbagar/product-rag-search/pkg/embeddings/openai"
+	embedgemini "github.com/fahimbagar/product-rag-search/pkg/embeddings/gemini"
 	"github.com/fahimbagar/product-rag-search/pkg/ingestion"
-	"github.com/fahimbagar/product-rag-search/pkg/llm/claude"
+	llmgemini "github.com/fahimbagar/product-rag-search/pkg/llm/gemini"
 	"github.com/fahimbagar/product-rag-search/pkg/pipeline"
 	"github.com/fahimbagar/product-rag-search/pkg/rerank/rrf"
 	"github.com/fahimbagar/product-rag-search/pkg/retrieval"
@@ -48,8 +48,14 @@ func run(logger *slog.Logger) error {
 	}
 	defer db.Close()
 
-	embedder := openai.NewClient(cfg.OpenAIAPIKey, cfg.OpenAIEmbeddingModel)
-	claudeClient := claude.NewClient(cfg.AnthropicAPIKey, cfg.ClaudeIntentModel, cfg.ClaudeAnswerModel)
+	embedder, err := embedgemini.NewClient(ctx, cfg.GeminiAPIKey, cfg.GeminiEmbeddingModel, cfg.GeminiEmbeddingDimension)
+	if err != nil {
+		return err
+	}
+	llmClient, err := llmgemini.NewClient(ctx, cfg.GeminiAPIKey, cfg.GeminiIntentModel, cfg.GeminiAnswerModel)
+	if err != nil {
+		return err
+	}
 	products := postgres.NewProductStore(db)
 	graphStore := graph.NewStore(db)
 
@@ -60,11 +66,11 @@ func run(logger *slog.Logger) error {
 	}
 
 	p := pipeline.New(
-		claudeClient,
+		llmClient,
 		embedder,
 		sources,
 		rrf.New(cfg.RRFK),
-		claudeClient,
+		llmClient,
 		products,
 		pipeline.Config{RetrievalTopK: cfg.RetrievalTopK, FinalTopN: cfg.FinalTopN},
 	)

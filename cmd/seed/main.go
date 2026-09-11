@@ -12,7 +12,7 @@ import (
 	"os"
 
 	"github.com/fahimbagar/product-rag-search/pkg/config"
-	"github.com/fahimbagar/product-rag-search/pkg/embeddings/openai"
+	"github.com/fahimbagar/product-rag-search/pkg/embeddings/gemini"
 	"github.com/fahimbagar/product-rag-search/pkg/ingestion"
 	"github.com/fahimbagar/product-rag-search/pkg/retrieval/graph"
 	"github.com/fahimbagar/product-rag-search/pkg/store/postgres"
@@ -71,7 +71,10 @@ func run(logger *slog.Logger) error {
 	}
 	defer db.Close()
 
-	embedder := openai.NewClient(cfg.OpenAIAPIKey, cfg.OpenAIEmbeddingModel)
+	embedder, err := gemini.NewClient(ctx, cfg.GeminiAPIKey, cfg.GeminiEmbeddingModel, cfg.GeminiEmbeddingDimension)
+	if err != nil {
+		return err
+	}
 	products := postgres.NewProductStore(db)
 	graphStore := graph.NewStore(db)
 	ingester := ingestion.NewIngester(embedder, products, graphStore)
