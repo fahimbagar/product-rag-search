@@ -6,6 +6,7 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
@@ -13,6 +14,7 @@ import (
 	"github.com/fahimbagar/product-rag-search/internal/embeddings"
 	"github.com/fahimbagar/product-rag-search/internal/intent"
 	"github.com/fahimbagar/product-rag-search/internal/llm"
+	"github.com/fahimbagar/product-rag-search/internal/metrics"
 	"github.com/fahimbagar/product-rag-search/internal/rerank"
 	"github.com/fahimbagar/product-rag-search/internal/retrieval"
 	"github.com/fahimbagar/product-rag-search/internal/store"
@@ -69,20 +71,27 @@ type Result struct {
 }
 
 func (p *Pipeline) Query(ctx context.Context, query string) (Result, error) {
+	classifyStart := time.Now()
 	classification, err := p.classifier.Classify(ctx, query)
+	metrics.PipelineStageDuration.WithLabelValues("classify").Observe(time.Since(classifyStart).Seconds())
 	if err != nil {
 		return Result{}, fmt.Errorf("pipeline: classify: %w", err)
 	}
+	metrics.IntentClassificationsTotal.WithLabelValues(string(classification.Intent)).Inc()
 
 	if classification.Intent == intent.OutOfScope {
+		deflectStart := time.Now()
 		answer, err := p.generator.Deflect(ctx, query)
+		metrics.PipelineStageDuration.WithLabelValues("deflect").Observe(time.Since(deflectStart).Seconds())
 		if err != nil {
 			return Result{}, fmt.Errorf("pipeline: deflect: %w", err)
 		}
 		return Result{Intent: classification.Intent, Answer: answer}, nil
 	}
 
+	embedStart := time.Now()
 	embedding, err := p.embedder.Embed(ctx, query)
+	metrics.PipelineStageDuration.WithLabelValues("embed").Observe(time.Since(embedStart).Seconds())
 	if err != nil {
 		return Result{}, fmt.Errorf("pipeline: embed: %w", err)
 	}
@@ -100,15 +109,20 @@ func (p *Pipeline) Query(ctx context.Context, query string) (Result, error) {
 		return Result{}, fmt.Errorf("pipeline: retrieve: %w", err)
 	}
 
+	rerankStart := time.Now()
 	fused, err := p.reranker.Rerank(ctx, query, signals...)
+	metrics.PipelineStageDuration.WithLabelValues("rerank").Observe(time.Since(rerankStart).Seconds())
 	if err != nil {
 		return Result{}, fmt.Errorf("pipeline: rerank: %w", err)
 	}
 	if len(fused) > p.cfg.FinalTopN {
 		fused = fused[:p.cfg.FinalTopN]
 	}
+	recordSignalContribution(signals, fused)
 
+	hydrateStart := time.Now()
 	products, err := p.hydrate(ctx, fused)
+	metrics.PipelineStageDuration.WithLabelValues("hydrate").Observe(time.Since(hydrateStart).Seconds())
 	if err != nil {
 		return Result{}, fmt.Errorf("pipeline: hydrate: %w", err)
 	}
@@ -129,7 +143,9 @@ func (p *Pipeline) Query(ctx context.Context, query string) (Result, error) {
 		}
 	}
 
+	generateStart := time.Now()
 	answer, err := p.generator.GenerateAnswer(ctx, query, docs)
+	metrics.PipelineStageDuration.WithLabelValues("generate").Observe(time.Since(generateStart).Seconds())
 	if err != nil {
 		return Result{}, fmt.Errorf("pipeline: generate answer: %w", err)
 	}
@@ -161,7 +177,9 @@ func (p *Pipeline) searchAll(ctx context.Context, q retrieval.Query) ([][]retrie
 	g, gctx := errgroup.WithContext(ctx)
 	for i, source := range p.sources {
 		g.Go(func() error {
+			start := time.Now()
 			candidates, err := source.Search(gctx, q)
+			metrics.PipelineStageDuration.WithLabelValues(source.Name() + "_search").Observe(time.Since(start).Seconds())
 			if err != nil {
 				return fmt.Errorf("%s: %w", source.Name(), err)
 			}
@@ -173,6 +191,26 @@ func (p *Pipeline) searchAll(ctx context.Context, q retrieval.Query) ([][]retrie
 		return nil, err
 	}
 	return signals, nil
+}
+
+// recordSignalContribution counts, for each final top-N result, which
+// retrieval signal(s) actually surfaced it -- a result found by multiple
+// signals increments each of them.
+func recordSignalContribution(signals [][]retrieval.Candidate, final []retrieval.Candidate) {
+	foundBy := make(map[string]map[string]bool, len(final))
+	for _, signal := range signals {
+		for _, c := range signal {
+			if foundBy[c.ProductID] == nil {
+				foundBy[c.ProductID] = make(map[string]bool)
+			}
+			foundBy[c.ProductID][c.Source] = true
+		}
+	}
+	for _, c := range final {
+		for source := range foundBy[c.ProductID] {
+			metrics.RetrievalSignalContribution.WithLabelValues(source).Inc()
+		}
+	}
 }
 
 func (p *Pipeline) hydrate(ctx context.Context, candidates []retrieval.Candidate) ([]store.Product, error) {

@@ -22,6 +22,7 @@ import (
 
 	"github.com/fahimbagar/product-rag-search/internal/intent"
 	"github.com/fahimbagar/product-rag-search/internal/llm"
+	"github.com/fahimbagar/product-rag-search/internal/metrics"
 )
 
 // Client wraps the Gemini SDK. It satisfies both intent.Classifier and
@@ -87,6 +88,7 @@ func (c *Client) Classify(ctx context.Context, query string) (intent.Result, err
 	if err != nil {
 		return intent.Result{}, fmt.Errorf("gemini classify: %w", err)
 	}
+	recordTokenUsage("classify", resp)
 
 	var result intent.Result
 	if err := json.Unmarshal([]byte(resp.Text()), &result); err != nil {
@@ -132,6 +134,7 @@ func (c *Client) GenerateAnswer(ctx context.Context, query string, docs []llm.Pr
 	if err != nil {
 		return llm.Answer{}, fmt.Errorf("gemini generate answer: %w", err)
 	}
+	recordTokenUsage("generate", resp)
 
 	var payload answerPayload
 	if err := json.Unmarshal([]byte(resp.Text()), &payload); err != nil {
@@ -149,6 +152,9 @@ func (c *Client) GenerateAnswer(ctx context.Context, query string, docs []llm.Pr
 	for _, id := range payload.CitedProductIDs {
 		if validIDs[id] {
 			citedIDs = append(citedIDs, id)
+			metrics.CitationOutcomes.WithLabelValues("valid").Inc()
+		} else {
+			metrics.CitationOutcomes.WithLabelValues("hallucinated").Inc()
 		}
 	}
 
@@ -169,7 +175,18 @@ func (c *Client) Deflect(ctx context.Context, query string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("gemini deflect: %w", err)
 	}
+	recordTokenUsage("deflect", resp)
 	return resp.Text(), nil
+}
+
+func recordTokenUsage(call string, resp *genai.GenerateContentResponse) {
+	if resp == nil || resp.UsageMetadata == nil {
+		return
+	}
+	usage := resp.UsageMetadata
+	metrics.GeminiTokensTotal.WithLabelValues(call, "prompt").Add(float64(usage.PromptTokenCount))
+	metrics.GeminiTokensTotal.WithLabelValues(call, "candidates").Add(float64(usage.CandidatesTokenCount))
+	metrics.GeminiTokensTotal.WithLabelValues(call, "total").Add(float64(usage.TotalTokenCount))
 }
 
 func formatProductDoc(d llm.ProductDoc) string {

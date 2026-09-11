@@ -3,9 +3,12 @@ package router
 import (
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/fahimbagar/product-rag-search/internal/metrics"
 )
 
 type statusRecorder struct {
@@ -29,13 +32,16 @@ func withMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 				logger.Error("panic recovered", "request_id", requestID, "panic", rr)
 				http.Error(rec, "internal server error", http.StatusInternalServerError)
 			}
+			duration := time.Since(start)
 			logger.Info("request",
 				"request_id", requestID,
 				"method", r.Method,
 				"path", r.URL.Path,
 				"status", rec.status,
-				"duration_ms", time.Since(start).Milliseconds(),
+				"duration_ms", duration.Milliseconds(),
 			)
+			metrics.HTTPRequestsTotal.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(rec.status)).Inc()
+			metrics.HTTPRequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration.Seconds())
 		}()
 
 		next.ServeHTTP(rec, r)
