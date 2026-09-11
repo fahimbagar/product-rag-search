@@ -39,7 +39,11 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("init migrate: %w", err)
 	}
-	defer m.Close()
+	defer func() {
+		if srcErr, dbErr := m.Close(); srcErr != nil || dbErr != nil {
+			slog.Error("migrate: close", "source_error", srcErr, "database_error", dbErr)
+		}
+	}()
 
 	switch direction {
 	case "up":
