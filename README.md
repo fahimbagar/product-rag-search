@@ -154,7 +154,7 @@ Both fail the run if the aggregate score drops below a threshold
 (`minRetrievalRecall`, `minIntentAccuracy`) — regression gates, not just
 dashboard numbers.
 
-See [docs/future-improvements.md](docs/future-improvements.md) for what these
+See [docs/FUTURE-IMPROVEMENTS.md](docs/FUTURE-IMPROVEMENTS.md) for what these
 five areas do *not* cover (faithfulness/correctness of the generated answer
 text) and why.
 
@@ -169,6 +169,6 @@ Unit tests use table-driven cases with `testify/assert`
 
 ## Future improvements
 
-See [docs/future-improvements.md](docs/future-improvements.md) — alternative
+See [docs/FUTURE-IMPROVEMENTS.md](docs/FUTURE-IMPROVEMENTS.md) — alternative
 LLM/embeddings providers (and the citation-verification tradeoff involved),
 integration tests, reranker swaps, auth hardening, and observability.

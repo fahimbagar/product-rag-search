@@ -9,7 +9,7 @@
 // So GenerateAnswer asks the model to self-report cited_product_ids via a
 // JSON schema instead: the shape is enforced, but nothing verifies the
 // model's claim the way Claude's citations do. See
-// docs/future-improvements.md for the full tradeoff.
+// docs/FUTURE-IMPROVEMENTS.md for the full tradeoff.
 package gemini
 
 import (
