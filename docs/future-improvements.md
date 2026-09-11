@@ -2,39 +2,47 @@
 
 ## Alternative LLM / embeddings providers
 
-Claude + OpenAI is the current default, but both seams are interfaces
-(`intent.Classifier`/`llm.Generator` and `embeddings.Embedder`), so either can be
-swapped independently.
+Gemini (`gemini-3.5-flash-lite` for intent, `gemini-3.8-flash` for generation,
+`gemini-embedding-001` for embeddings) is the current default — one provider,
+one API key, a genuinely **permanent free tier** for both chat and embeddings
+(verified against Google's pricing docs), unlike OpenAI/Anthropic's one-time
+trial credits. Both seams are interfaces (`intent.Classifier`/`llm.Generator`
+and `embeddings.Embedder`), so either can be swapped independently if cost
+stops being the deciding factor.
 
-**Embeddings (low-risk swap):** OpenAI → **Voyage AI** (Anthropic's recommended
-embeddings partner) or **Google Gemini embeddings** are drop-in alternatives — "text
-in, vector out," no feature-parity concerns. Gemini's is notable because it's on a
-genuinely **permanent free tier** (verified against Google's pricing docs), unlike
-OpenAI/Anthropic's one-time trial credits.
+**Claude — previously used here, and the real upgrade path for verified
+citations:** this project originally used Claude (`claude-haiku-4-5` /
+`claude-sonnet-5`) specifically for its `citations` API. Sending each
+retrieved product as a `document` content block with
+`citations: {enabled: true}` gets back a response where each answer segment
+is linked to the exact source document and the exact quoted span of text
+that supports it — the API computes and verifies this itself; the model
+cannot fake a citation.
 
-**LLM / generation (real tradeoff):** the main reason to stay on Claude is its
-`citations` API. We send each retrieved product as a `document` content block with
-`citations: {enabled: true}`, and Claude's response comes back with each answer
-segment linked to the exact source document and the exact quoted span of text that
-supports it — the API computes and verifies this; the model cannot fake a citation.
-That's what backs the `cited: bool` flag on each product in the `/query` response.
+Gemini has no equivalent for documents supplied inline per-request. Its
+closest feature, File Search, requires pre-indexing a whole corpus into a
+persistent store and lets Gemini do its own retrieval internally — which
+conflicts with this project's own hybrid retrieval/RRF pipeline (see the
+package doc on `pkg/llm/gemini/client.go` for the full reasoning). The
+current workaround, implemented in that file's `GenerateAnswer`: a JSON
+schema requiring `{"answer": "string", "cited_product_ids": ["string"]}`,
+with the model self-reporting which products it used. We do validate the
+reported IDs are actually among the candidates we gave it (rules out
+hallucinated IDs that were never offered), but nothing verifies the *claim*
+itself — that the answer text genuinely relied on that product. So the
+`cited` flag on each product in the `/query` response is "the model's
+self-report, filtered for validity," not "API-verified."
 
-Switching generation to **Google Gemini** (or DeepSeek, Mistral, etc.) would mean
-losing that verification. None of them have an equivalent document-citation
-mechanism. The workaround is structured output: define a JSON schema like
-`{"answer": "string", "cited_product_ids": ["string"]}` and instruct the model to
-self-report which products it used. The schema guarantees the *shape* of the
-response, but nothing checks whether the reported IDs are actually what the answer
-text relied on — it's the model's word for it, not an API-verified fact. Practically,
-the `cited` flag would go from "verified" to "the model's best guess."
+**If citation accuracy becomes important** (e.g. this moves from a demo
+toward something where incorrect grounding has real consequences): swap
+`pkg/llm/gemini` for a `pkg/llm/claude` implementation of the same
+`llm.Generator` interface — nothing else in the pipeline needs to change,
+that's the point of the interface. Budget for Claude's cost at that point
+(no free tier, roughly $1-10 per million tokens depending on model).
 
-(DeepSeek was also considered and ruled out for now: it has no embeddings API at
-all, so it can only ever replace the LLM half, not the embeddings half — and it
-has the same citation-verification gap as Gemini.)
-
-**Open decision:** switch both roles to Gemini's free tier (accepting the citation
-downgrade), switch embeddings only, or stay on Claude + OpenAI. Revisit once cost
-at real usage volume is known.
+(DeepSeek was also considered and ruled out: no free tier at all — it's
+cheap, pay-as-you-go from the first token, not free — plus no embeddings API
+and the same citation-verification gap as Gemini.)
 
 ## Alternative rerankers
 
@@ -57,8 +65,8 @@ query and each candidate document's *text* (title/description/attributes),
 not just its rank position, so it can actually judge relevance rather than
 agreement between signals. Two managed options that fit our `Reranker`
 interface as a drop-in (query + documents in, reranked scores out):
-- **Voyage AI rerank** (`rerank-2.5` / `rerank-3`) — pairs naturally with
-  Voyage embeddings if we ever switch off OpenAI (see above).
+- **Voyage AI rerank** (`rerank-2.5` / `rerank-3`) — a different vendor than
+  our current Gemini embeddings, but same "call an API, get scores back" shape.
 - **Cohere Rerank** (`rerank-v4.0-pro` / `-fast`) — same shape, different
   vendor.
 

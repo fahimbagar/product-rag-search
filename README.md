@@ -12,9 +12,9 @@ and grounded, cited answer generation.
 | Vector store | Postgres + pgvector | Cosine similarity search on the `products.embedding` column |
 | Graph store | Postgres + Apache AGE | Cypher traversal on `product_graph`, same database as pgvector — one instance to operate, not two |
 | Keyword search | Postgres full-text (`tsvector`/`ts_rank`) | Third retrieval signal, no extra service |
-| Intent classification | Claude (`claude-haiku-4-5`) | Cheap/fast structured JSON output |
-| Answer generation | Claude (`claude-sonnet-5`) | Citation-grounded generation via the Messages API |
-| Embeddings | OpenAI (`text-embedding-3-small`) | Claude has no embeddings endpoint, so this is a required second provider |
+| Intent classification | Gemini (`gemini-3.5-flash-lite`) | Cheap/fast structured JSON output, permanent free tier |
+| Answer generation | Gemini (`gemini-3.8-flash`) | Structured-output generation with self-reported product citations |
+| Embeddings | Gemini (`gemini-embedding-001`, 1536-dim) | Same provider/API key as generation, permanent free tier |
 | Re-ranking | Reciprocal Rank Fusion (pure Go) | No extra ML service; swappable behind an interface |
 | Orchestration | Docker Compose | `postgres` → `migrate` → `app`, `seed` on demand |
 | Migrations | `golang-migrate` | Plain SQL files, reviewable, no ORM |
@@ -23,7 +23,7 @@ and grounded, cited answer generation.
 
 ```
                      ┌────────────────────┐
-   POST /query  ───► │ intent.Classify     │  Claude Haiku, structured JSON:
+   POST /query  ───► │ intent.Classify     │  Gemini Flash-Lite, structured JSON:
                      │ (pkg/intent)        │  {intent, confidence, entities}
                      └─────────┬───────────┘
                                │
@@ -31,7 +31,7 @@ and grounded, cited answer generation.
                                │ no
                                ▼
                      ┌────────────────────┐
-                     │ embeddings.Embed    │  OpenAI text-embedding-3-small
+                     │ embeddings.Embed    │  Gemini gemini-embedding-001
                      │ (pkg/embeddings)    │
                      └─────────┬───────────┘
                                │
@@ -54,24 +54,24 @@ and grounded, cited answer generation.
                      └─────────┬───────────┘
                                ▼
                      ┌────────────────────┐
-                     │ llm.GenerateAnswer  │  Claude Sonnet, products as `document`
-                     │ (pkg/llm/claude)    │  blocks with citations enabled
+                     │ llm.GenerateAnswer  │  Gemini Flash, structured JSON:
+                     │ (pkg/llm/gemini)    │  {answer, cited_product_ids} (self-reported)
                      └─────────┬───────────┘
                                ▼
                      {intent, answer, products[] with cited: bool}
 ```
 
 **Ingestion flow** (`pkg/ingestion`, run via `cmd/seed` or `POST /ingest`):
-for each raw product → embed (OpenAI) → insert into Postgres (`store.ProductRepository`)
+for each raw product → embed (Gemini) → insert into Postgres (`store.ProductRepository`)
 → upsert into the graph (`Product` vertex + `IN_CATEGORY`/`BY_BRAND`/`HAS_ATTRIBUTE`
 edges) → wire up any curated `RELATED_TO` edges between products.
 
 ## Package layout
 
 - `pkg/intent` — intent enum, entities, `Classifier` interface
-- `pkg/embeddings` (+ `openai/`) — `Embedder` interface and its OpenAI implementation
-- `pkg/llm` (+ `claude/`) — `ProductDoc`/`Answer` types, `Generator` interface, and the
-  Claude implementation (also implements `intent.Classifier`)
+- `pkg/embeddings` (+ `gemini/`) — `Embedder` interface and its Gemini implementation
+- `pkg/llm` (+ `gemini/`) — `ProductDoc`/`Answer` types, `Generator` interface, and the
+  Gemini implementation (also implements `intent.Classifier`)
 - `pkg/retrieval` (+ `vector/`, `fulltext/`, `graph/`) — `Candidate`/`Query` types,
   `Source` interface, and its three implementations
 - `pkg/rerank` (+ `rrf/`) — `Reranker` interface and the RRF implementation
@@ -91,7 +91,7 @@ callers — see [Future improvements](#future-improvements) for concrete candida
 
 ```bash
 cp .env.example .env
-# fill in ANTHROPIC_API_KEY and OPENAI_API_KEY
+# fill in GEMINI_API_KEY
 
 docker compose build
 docker compose up -d postgres migrate app
