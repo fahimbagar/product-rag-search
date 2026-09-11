@@ -1,12 +1,13 @@
 module github.com/fahimbagar/product-rag-search
 
-go 1.27.1
+go 1.27
 
 require (
 	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/pgvector/pgvector-go v0.4.1
+	github.com/prometheus/client_golang v1.24.1
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/sync v0.23.0
 	google.golang.org/genai v1.71.0
@@ -31,7 +32,6 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.70.1 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
