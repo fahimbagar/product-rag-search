@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pgvector/pgvector-go"
 
-	"github.com/fahimbagar/product-rag-search/pkg/store"
+	"github.com/fahimbagar/product-rag-search/internal/store"
 )
 
 // ProductStore implements store.ProductRepository against Postgres.

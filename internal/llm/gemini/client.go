@@ -20,8 +20,8 @@ import (
 
 	"google.golang.org/genai"
 
-	"github.com/fahimbagar/product-rag-search/pkg/intent"
-	"github.com/fahimbagar/product-rag-search/pkg/llm"
+	"github.com/fahimbagar/product-rag-search/internal/intent"
+	"github.com/fahimbagar/product-rag-search/internal/llm"
 )
 
 // Client wraps the Gemini SDK. It satisfies both intent.Classifier and

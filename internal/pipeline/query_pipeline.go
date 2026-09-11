@@ -10,12 +10,12 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/fahimbagar/product-rag-search/pkg/embeddings"
-	"github.com/fahimbagar/product-rag-search/pkg/intent"
-	"github.com/fahimbagar/product-rag-search/pkg/llm"
-	"github.com/fahimbagar/product-rag-search/pkg/rerank"
-	"github.com/fahimbagar/product-rag-search/pkg/retrieval"
-	"github.com/fahimbagar/product-rag-search/pkg/store"
+	"github.com/fahimbagar/product-rag-search/internal/embeddings"
+	"github.com/fahimbagar/product-rag-search/internal/intent"
+	"github.com/fahimbagar/product-rag-search/internal/llm"
+	"github.com/fahimbagar/product-rag-search/internal/rerank"
+	"github.com/fahimbagar/product-rag-search/internal/retrieval"
+	"github.com/fahimbagar/product-rag-search/internal/store"
 )
 
 type Config struct {

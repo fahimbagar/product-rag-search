@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/fahimbagar/product-rag-search/pkg/ingestion"
-	"github.com/fahimbagar/product-rag-search/pkg/pipeline"
+	"github.com/fahimbagar/product-rag-search/internal/ingestion"
+	"github.com/fahimbagar/product-rag-search/internal/pipeline"
 )
 
 // New builds the HTTP handler for the service.

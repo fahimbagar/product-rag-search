@@ -23,7 +23,7 @@ Gemini has no equivalent for documents supplied inline per-request. Its
 closest feature, File Search, requires pre-indexing a whole corpus into a
 persistent store and lets Gemini do its own retrieval internally — which
 conflicts with this project's own hybrid retrieval/RRF pipeline (see the
-package doc on `pkg/llm/gemini/client.go` for the full reasoning). The
+package doc on `internal/llm/gemini/client.go` for the full reasoning). The
 current workaround, implemented in that file's `GenerateAnswer`: a JSON
 schema requiring `{"answer": "string", "cited_product_ids": ["string"]}`,
 with the model self-reporting which products it used. We do validate the
@@ -35,7 +35,7 @@ self-report, filtered for validity," not "API-verified."
 
 **If citation accuracy becomes important** (e.g. this moves from a demo
 toward something where incorrect grounding has real consequences): swap
-`pkg/llm/gemini` for a `pkg/llm/claude` implementation of the same
+`internal/llm/gemini` for a `internal/llm/claude` implementation of the same
 `llm.Generator` interface — nothing else in the pipeline needs to change,
 that's the point of the interface. Budget for Claude's cost at that point
 (no free tier, roughly $1-10 per million tokens depending on model).
@@ -46,7 +46,7 @@ and the same citation-verification gap as Gemini.)
 
 ## Alternative rerankers
 
-The current reranker is Reciprocal Rank Fusion (`pkg/rerank/rrf`) — a pure-Go
+The current reranker is Reciprocal Rank Fusion (`internal/rerank/rrf`) — a pure-Go
 formula (`score = Σ 1/(k + rank)`) that merges the three retrieval signals'
 rank *positions*, with no understanding of the query or document text itself.
 It was chosen because it's free, has no extra infra, and is a well-established
@@ -56,7 +56,7 @@ completely different reasons score identically to two candidates that are
 genuinely both excellent matches — RRF can't tell "coincidentally ranked
 similarly" apart from "actually relevant."
 
-`rerank.Reranker` is the interface (`pkg/rerank/rerank.go`) precisely so a
+`rerank.Reranker` is the interface (`internal/rerank/rerank.go`) precisely so a
 better-quality reranker can be swapped in later without touching the
 pipeline. The candidates, in increasing order of quality/cost:
 
@@ -97,5 +97,5 @@ self-hosted model or an LLM-based reranker.
   one `integration_test.go` per package that needs a live Postgres — not yet added.
 - **Auth hardening**: `/ingest` is gated by a single static bearer token
   (`ADMIN_TOKEN`); fine for a demo, not for multi-tenant or production use.
-- **Observability**: structured request logging exists (`pkg/router/middleware.go`);
+- **Observability**: structured request logging exists (`internal/router/middleware.go`);
   no metrics/tracing yet.

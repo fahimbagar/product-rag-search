@@ -6,9 +6,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fahimbagar/product-rag-search/pkg/embeddings"
-	"github.com/fahimbagar/product-rag-search/pkg/retrieval/graph"
-	"github.com/fahimbagar/product-rag-search/pkg/store"
+	"github.com/fahimbagar/product-rag-search/internal/embeddings"
+	"github.com/fahimbagar/product-rag-search/internal/retrieval/graph"
+	"github.com/fahimbagar/product-rag-search/internal/store"
 )
 
 // RawProduct is the input shape for a single product before embedding or

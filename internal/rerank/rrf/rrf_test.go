@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/fahimbagar/product-rag-search/pkg/retrieval"
+	"github.com/fahimbagar/product-rag-search/internal/retrieval"
 )
 
 func TestFuserRerank(t *testing.T) {

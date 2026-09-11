@@ -11,11 +11,11 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/fahimbagar/product-rag-search/pkg/config"
-	"github.com/fahimbagar/product-rag-search/pkg/embeddings/gemini"
-	"github.com/fahimbagar/product-rag-search/pkg/ingestion"
-	"github.com/fahimbagar/product-rag-search/pkg/retrieval/graph"
-	"github.com/fahimbagar/product-rag-search/pkg/store/postgres"
+	"github.com/fahimbagar/product-rag-search/internal/config"
+	"github.com/fahimbagar/product-rag-search/internal/embeddings/gemini"
+	"github.com/fahimbagar/product-rag-search/internal/ingestion"
+	"github.com/fahimbagar/product-rag-search/internal/retrieval/graph"
+	"github.com/fahimbagar/product-rag-search/internal/store/postgres"
 )
 
 type seedProduct struct {

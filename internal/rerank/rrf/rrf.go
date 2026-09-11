@@ -6,7 +6,7 @@ import (
 	"context"
 	"sort"
 
-	"github.com/fahimbagar/product-rag-search/pkg/retrieval"
+	"github.com/fahimbagar/product-rag-search/internal/retrieval"
 )
 
 const defaultK = 60

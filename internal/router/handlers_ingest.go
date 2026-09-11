@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/fahimbagar/product-rag-search/pkg/ingestion"
+	"github.com/fahimbagar/product-rag-search/internal/ingestion"
 )
 
 type ingestProduct struct {

@@ -5,7 +5,7 @@ package rerank
 import (
 	"context"
 
-	"github.com/fahimbagar/product-rag-search/pkg/retrieval"
+	"github.com/fahimbagar/product-rag-search/internal/retrieval"
 )
 
 // Reranker fuses one ranked candidate list per retrieval signal into a

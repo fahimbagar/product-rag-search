@@ -22,64 +22,58 @@ and grounded, cited answer generation.
 ## Architecture
 
 ```
-                     ┌────────────────────┐
-   POST /query  ───► │ intent.Classify     │  Gemini Flash-Lite, structured JSON:
-                     │ (pkg/intent)        │  {intent, confidence, entities}
-                     └─────────┬───────────┘
-                               │
-                 out_of_scope? │ yes ──► llm.Deflect (short reply, no retrieval)
-                               │ no
-                               ▼
-                     ┌────────────────────┐
-                     │ embeddings.Embed    │  Gemini gemini-embedding-001
-                     │ (pkg/embeddings)    │
-                     └─────────┬───────────┘
-                               │
-              ┌────────────────┼─────────────────┐
-              ▼                ▼                  ▼
-        vector.Search    fulltext.Search     graph.Search        (run concurrently,
-     (pgvector cosine)  (Postgres ts_rank)  (AGE Cypher, seeded    pkg/retrieval/*)
-                                              from vector hits +
-                                              classifier entities)
-              └────────────────┼─────────────────┘
-                               ▼
-                     ┌────────────────────┐
-                     │ rerank.Rerank       │  Reciprocal Rank Fusion:
-                     │ (pkg/rerank/rrf)    │  score = Σ 1/(k + rank) per signal
-                     └─────────┬───────────┘
-                               ▼
-                     ┌────────────────────┐
-                     │ store.GetByIDs      │  hydrate top-N candidates into
-                     │ (pkg/store)         │  full product records
-                     └─────────┬───────────┘
-                               ▼
-                     ┌────────────────────┐
-                     │ llm.GenerateAnswer  │  Gemini Flash, structured JSON:
-                     │ (pkg/llm/gemini)    │  {answer, cited_product_ids} (self-reported)
-                     └─────────┬───────────┘
-                               ▼
-                     {intent, answer, products[] with cited: bool}
+POST /query
+  │
+  ▼
+1. intent.Classify (internal/intent)                Gemini Flash-Lite, structured JSON:
+                                                      {intent, confidence, entities}
+  │
+  ├─ out_of_scope? ──yes──► llm.Deflect (short reply, no retrieval, return)
+  │  no
+  ▼
+2. embeddings.Embed (internal/embeddings)           Gemini gemini-embedding-001
+  │
+  ▼
+3. fan out concurrently (internal/retrieval/*):
+     vector.Search    — pgvector cosine similarity
+     fulltext.Search  — Postgres ts_rank
+     graph.Search     — AGE Cypher, seeded from vector hits + classifier entities
+  │
+  ▼
+4. rerank.Rerank (internal/rerank/rrf)               Reciprocal Rank Fusion:
+                                                      score = Σ 1/(k + rank) per signal
+  │
+  ▼
+5. store.GetByIDs (internal/store)                   hydrate top-N candidates into
+                                                      full product records
+  │
+  ▼
+6. llm.GenerateAnswer (internal/llm/gemini)           Gemini Flash, structured JSON:
+                                                      {answer, cited_product_ids} (self-reported)
+  │
+  ▼
+{intent, answer, products[] with cited: bool}
 ```
 
-**Ingestion flow** (`pkg/ingestion`, run via `cmd/seed` or `POST /ingest`):
+**Ingestion flow** (`internal/ingestion`, run via `cmd/seed` or `POST /ingest`):
 for each raw product → embed (Gemini) → insert into Postgres (`store.ProductRepository`)
 → upsert into the graph (`Product` vertex + `IN_CATEGORY`/`BY_BRAND`/`HAS_ATTRIBUTE`
 edges) → wire up any curated `RELATED_TO` edges between products.
 
 ## Package layout
 
-- `pkg/intent` — intent enum, entities, `Classifier` interface
-- `pkg/embeddings` (+ `gemini/`) — `Embedder` interface and its Gemini implementation
-- `pkg/llm` (+ `gemini/`) — `ProductDoc`/`Answer` types, `Generator` interface, and the
+- `internal/intent` — intent enum, entities, `Classifier` interface
+- `internal/embeddings` (+ `gemini/`) — `Embedder` interface and its Gemini implementation
+- `internal/llm` (+ `gemini/`) — `ProductDoc`/`Answer` types, `Generator` interface, and the
   Gemini implementation (also implements `intent.Classifier`)
-- `pkg/retrieval` (+ `vector/`, `fulltext/`, `graph/`) — `Candidate`/`Query` types,
+- `internal/retrieval` (+ `vector/`, `fulltext/`, `graph/`) — `Candidate`/`Query` types,
   `Source` interface, and its three implementations
-- `pkg/rerank` (+ `rrf/`) — `Reranker` interface and the RRF implementation
-- `pkg/store` (+ `postgres/`) — `Product` domain type, `ProductRepository` interface,
+- `internal/rerank` (+ `rrf/`) — `Reranker` interface and the RRF implementation
+- `internal/store` (+ `postgres/`) — `Product` domain type, `ProductRepository` interface,
   and the Postgres implementation (pgxpool, AGE session setup)
-- `pkg/ingestion` — embed → insert → graph-edge orchestration
-- `pkg/pipeline` — the query flow above, wired from interfaces so every stage is swappable
-- `pkg/router` — HTTP handlers (`/health`, `/query`, `/ingest`) and middleware
+- `internal/ingestion` — embed → insert → graph-edge orchestration
+- `internal/pipeline` — the query flow above, wired from interfaces so every stage is swappable
+- `internal/router` — HTTP handlers (`/health`, `/query`, `/ingest`) and middleware
 - `cmd/{server,migrate,seed}` — entrypoints
 
 Every cross-cutting seam (embeddings, intent classification, generation, each retrieval
@@ -135,7 +129,7 @@ go test ./...
 ```
 
 Unit tests use table-driven cases with `testify/assert`
-(`pkg/rerank/rrf`, `pkg/retrieval/graph`). Integration tests behind a
+(`internal/rerank/rrf`, `internal/retrieval/graph`). Integration tests behind a
 `integration` build tag are not yet added — see
 [docs/future-improvements.md](docs/future-improvements.md).
 

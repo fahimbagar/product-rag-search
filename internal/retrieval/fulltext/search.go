@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/fahimbagar/product-rag-search/pkg/retrieval"
+	"github.com/fahimbagar/product-rag-search/internal/retrieval"
 )
 
 type Searcher struct {

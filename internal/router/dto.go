@@ -1,6 +1,6 @@
 package router
 
-import "github.com/fahimbagar/product-rag-search/pkg/pipeline"
+import "github.com/fahimbagar/product-rag-search/internal/pipeline"
 
 type queryRequest struct {
 	Query string `json:"query"`

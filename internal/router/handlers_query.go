@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/fahimbagar/product-rag-search/pkg/pipeline"
+	"github.com/fahimbagar/product-rag-search/internal/pipeline"
 )
 
 func handleQuery(logger *slog.Logger, p *pipeline.Pipeline) http.HandlerFunc {
