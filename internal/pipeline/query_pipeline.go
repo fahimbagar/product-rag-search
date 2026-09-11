@@ -20,11 +20,15 @@ import (
 	"github.com/fahimbagar/product-rag-search/internal/store"
 )
 
+// Config tunes how many candidates each retrieval source returns and how
+// many fused results survive into the final answer.
 type Config struct {
 	RetrievalTopK int
 	FinalTopN     int
 }
 
+// Pipeline wires an intent classifier, embedder, retrieval sources,
+// reranker, generator, and product store into the end-to-end query flow.
 type Pipeline struct {
 	classifier intent.Classifier
 	embedder   embeddings.Embedder
@@ -55,6 +59,8 @@ func New(
 	}
 }
 
+// ProductResult is one product in a query response, with whether the
+// generated answer actually cited it.
 type ProductResult struct {
 	ID       string
 	Title    string
@@ -64,6 +70,8 @@ type ProductResult struct {
 	Cited    bool
 }
 
+// Result is the full outcome of a Pipeline.Query call: the classified
+// intent, the generated answer text, and any cited products.
 type Result struct {
 	Intent   intent.Intent
 	Answer   string

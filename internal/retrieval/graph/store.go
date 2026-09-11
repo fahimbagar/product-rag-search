@@ -25,12 +25,14 @@ var (
 )
 
 // Writer is the graph-ingestion seam: turning a product record into graph
-// nodes/edges. Implemented by Store; consumed by pkg/ingestion.
+// nodes/edges. Implemented by Store; consumed by internal/ingestion.
 type Writer interface {
 	UpsertProduct(ctx context.Context, p ProductNode) error
 	LinkRelated(ctx context.Context, fromProductID, toProductID string, weight float64) error
 }
 
+// ProductNode is the graph-ingestion view of a product: enough to upsert its
+// vertex and category/brand/attribute edges.
 type ProductNode struct {
 	ProductID  string
 	Title      string
@@ -39,6 +41,8 @@ type ProductNode struct {
 	Attributes map[string]string
 }
 
+// Store implements retrieval.Source (graph-proximity search) and Writer
+// (graph-ingestion) against the Apache AGE "product_graph".
 type Store struct {
 	pool *pgxpool.Pool
 }

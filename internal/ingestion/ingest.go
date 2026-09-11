@@ -30,6 +30,8 @@ type RelatedPair struct {
 	Weight    float64
 }
 
+// Ingester orchestrates the embed -> insert -> graph-edge pipeline for
+// turning raw product records into stored, searchable products.
 type Ingester struct {
 	embedder embeddings.Embedder
 	products store.ProductRepository

@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
+// Product is the persisted domain record for a catalog item, including its
+// embedding vector once ingested.
 type Product struct {
 	ID          uuid.UUID
 	Title       string

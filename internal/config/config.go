@@ -7,6 +7,8 @@ import (
 	"strconv"
 )
 
+// Config holds the service's environment-derived settings: database and
+// Gemini connection info, HTTP/logging options, and retrieval/rerank tuning.
 type Config struct {
 	DatabaseURL string
 

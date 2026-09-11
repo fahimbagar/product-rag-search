@@ -11,6 +11,7 @@ import (
 	"github.com/fahimbagar/product-rag-search/internal/retrieval"
 )
 
+// Searcher implements retrieval.Source via pgvector cosine similarity.
 type Searcher struct {
 	pool *pgxpool.Pool
 }

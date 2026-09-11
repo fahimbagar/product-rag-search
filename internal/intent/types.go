@@ -4,13 +4,19 @@ package intent
 
 import "context"
 
+// Intent labels what kind of request a query is, so the pipeline can route
+// it (answer via retrieval, or deflect without one).
 type Intent string
 
 const (
-	ProductSearch     Intent = "product_search"
+	// ProductSearch means the user wants products matching some description.
+	ProductSearch Intent = "product_search"
+	// ProductComparison means the user wants to compare two or more specific products.
 	ProductComparison Intent = "product_comparison"
+	// AttributeQuestion means the user asks about a specific attribute of a product or category.
 	AttributeQuestion Intent = "product_attribute_question"
-	OutOfScope        Intent = "out_of_scope"
+	// OutOfScope means the query is unrelated to the product catalog.
+	OutOfScope Intent = "out_of_scope"
 )
 
 // Entities are structured hints extracted from the query alongside the
@@ -22,6 +28,8 @@ type Entities struct {
 	Attributes []string `json:"attributes"`
 }
 
+// Result is a classified query: its intent label, the classifier's
+// confidence, and any entities extracted alongside it.
 type Result struct {
 	Intent     Intent   `json:"intent"`
 	Confidence float64  `json:"confidence"`

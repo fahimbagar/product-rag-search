@@ -11,6 +11,7 @@ import (
 	"github.com/fahimbagar/product-rag-search/internal/retrieval"
 )
 
+// Searcher implements retrieval.Source via Postgres full-text search.
 type Searcher struct {
 	pool *pgxpool.Pool
 }

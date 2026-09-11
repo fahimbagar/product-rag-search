@@ -11,6 +11,7 @@ import (
 
 const defaultK = 60
 
+// Fuser implements rerank.Reranker via Reciprocal Rank Fusion.
 type Fuser struct {
 	K int
 }
