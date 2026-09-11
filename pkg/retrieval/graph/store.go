@@ -68,13 +68,13 @@ func (s *Store) Search(ctx context.Context, q retrieval.Query) ([]retrieval.Cand
 	}
 
 	if q.Category != "" && labelPattern.MatchString(q.Category) {
-		if err := s.accumulateByLabel(ctx, "Category", q.Category, proximity); err != nil {
+		if err := s.accumulateByLabel(ctx, "Category", "IN_CATEGORY", q.Category, proximity); err != nil {
 			return nil, err
 		}
 	}
 
 	if q.Brand != "" && labelPattern.MatchString(q.Brand) {
-		if err := s.accumulateByLabel(ctx, "Brand", q.Brand, proximity); err != nil {
+		if err := s.accumulateByLabel(ctx, "Brand", "BY_BRAND", q.Brand, proximity); err != nil {
 			return nil, err
 		}
 	}
@@ -82,30 +82,42 @@ func (s *Store) Search(ctx context.Context, q retrieval.Query) ([]retrieval.Cand
 	return rankCandidates(proximity, s.Name(), q.TopK), nil
 }
 
+// proximityEdgeTypes are the edge labels that contribute to graph proximity
+// between products. Apache AGE 1.6.0's Cypher parser doesn't support
+// multi-type alternation in a single pattern (`[:A|B]`), so each type is
+// queried separately and the results are merged in Go.
+var proximityEdgeTypes = []string{"IN_CATEGORY", "BY_BRAND", "HAS_ATTRIBUTE", "RELATED_TO"}
+
 func (s *Store) accumulateBySeedIDs(ctx context.Context, seedIDs []string, proximity map[string]int64) error {
 	quoted := make([]string, len(seedIDs))
 	for i, id := range seedIDs {
 		quoted[i] = "'" + id + "'"
 	}
+	idList := strings.Join(quoted, ", ")
 
-	query := fmt.Sprintf(`
-		SELECT * FROM cypher('product_graph', $$
-			MATCH (seed:Product)-[:IN_CATEGORY|BY_BRAND|HAS_ATTRIBUTE|RELATED_TO*1..2]-(related:Product)
-			WHERE seed.product_id IN [%s] AND related.product_id <> seed.product_id
-			RETURN related.product_id, count(*)
-		$$) AS (product_id agtype, proximity agtype)
-	`, strings.Join(quoted, ", "))
+	for _, edgeType := range proximityEdgeTypes {
+		query := fmt.Sprintf(`
+			SELECT * FROM cypher('product_graph', $$
+				MATCH (seed:Product)-[:%s*1..2]-(related:Product)
+				WHERE seed.product_id IN [%s] AND related.product_id <> seed.product_id
+				RETURN related.product_id, count(*)
+			$$) AS (product_id agtype, proximity agtype)
+		`, edgeType, idList)
 
-	return s.runProximityQuery(ctx, query, proximity)
+		if err := s.runProximityQuery(ctx, query, proximity); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (s *Store) accumulateByLabel(ctx context.Context, label, name string, proximity map[string]int64) error {
+func (s *Store) accumulateByLabel(ctx context.Context, label, edgeType, name string, proximity map[string]int64) error {
 	query := fmt.Sprintf(`
 		SELECT * FROM cypher('product_graph', $$
-			MATCH (n:%s {name: '%s'})<-[:IN_CATEGORY|BY_BRAND]-(related:Product)
+			MATCH (n:%s {name: '%s'})<-[:%s]-(related:Product)
 			RETURN related.product_id, count(*)
 		$$) AS (product_id agtype, proximity agtype)
-	`, label, cypherEscape(name))
+	`, label, cypherEscape(name), edgeType)
 
 	return s.runProximityQuery(ctx, query, proximity)
 }
