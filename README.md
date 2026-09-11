@@ -4,6 +4,14 @@ Product info search with a RAG pipeline: intent classification, hybrid
 retrieval (vector + graph + full-text), Reciprocal Rank Fusion re-ranking,
 and grounded, cited answer generation.
 
+> **This is a showcase/demo project, not a production build.** It
+> demonstrates the architecture (hybrid retrieval, RRF fusion, structured
+> LLM generation, metrics/eval) end to end, but skips things a real
+> deployment would need: `/ingest` auth is a single static bearer token,
+> there's no rate limiting or multi-tenant isolation, the seed catalog is
+> 24 fake products, and generated-answer faithfulness/correctness isn't
+> verified (see [docs/FUTURE-IMPROVEMENTS.md](docs/FUTURE-IMPROVEMENTS.md)).
+
 ## Stack
 
 | Concern | Choice | Why |
