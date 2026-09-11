@@ -18,6 +18,7 @@ and grounded, cited answer generation.
 | Re-ranking | Reciprocal Rank Fusion (pure Go) | No extra ML service; swappable behind an interface |
 | Orchestration | Docker Compose | `postgres` → `migrate` → `app`, `seed` on demand |
 | Migrations | `golang-migrate` | Plain SQL files, reviewable, no ORM |
+| Metrics | Prometheus (`client_golang`) + Grafana | Go-native metrics client, `GET /metrics`, pre-provisioned dashboard |
 
 ## Architecture
 
@@ -88,7 +89,7 @@ cp .env.example .env
 # fill in GEMINI_API_KEY
 
 docker compose build
-docker compose up -d postgres migrate app
+docker compose up -d postgres migrate app prometheus grafana
 docker compose --profile seed run --rm seed   # loads seed/products.json
 ```
 
@@ -122,6 +123,41 @@ same shape as `seed/products.json`:
 }
 ```
 
+## Monitoring & evaluation
+
+**Runtime metrics** (`GET /metrics`, Prometheus format, no auth — same as `/health`):
+HTTP request rate/latency/errors, per-pipeline-stage latency (classify, embed,
+each retrieval source, rerank, hydrate, generate, deflect), which retrieval
+signal(s) contributed each final result, self-reported citation valid vs.
+hallucinated counts, Gemini token usage, and intent classification counts.
+
+- Prometheus: http://localhost:9090 (scrapes `app:8080/metrics` every 15s)
+- Grafana: http://localhost:3000 (anonymous viewer access; auto-provisioned
+  "Product RAG Search" dashboard, datasource pre-configured — no manual setup)
+
+**Offline evals** (`eval/integration_tests/`, behind the `integration` build
+tag, need a live seeded Postgres + a real `GEMINI_API_KEY`):
+
+```bash
+export DATABASE_URL='postgres://postgres:postgres@localhost:5432/product_rag?sslmode=disable'
+export GEMINI_API_KEY='...'
+go test -tags=integration ./eval/... -v
+```
+
+- `retrieval_eval_test.go` — golden query → expected product titles (matched
+  by title, not ID, since seed IDs are regenerated every run), scored as
+  recall@FinalTopN against the real vector+fulltext+graph+RRF pipeline.
+- `intent_eval_test.go` — golden query → expected intent, scored as accuracy
+  against the real Gemini classifier.
+
+Both fail the run if the aggregate score drops below a threshold
+(`minRetrievalRecall`, `minIntentAccuracy`) — regression gates, not just
+dashboard numbers.
+
+See [docs/future-improvements.md](docs/future-improvements.md) for what these
+five areas do *not* cover (faithfulness/correctness of the generated answer
+text) and why.
+
 ## Tests
 
 ```bash
@@ -129,9 +165,7 @@ go test ./...
 ```
 
 Unit tests use table-driven cases with `testify/assert`
-(`internal/rerank/rrf`, `internal/retrieval/graph`). Integration tests behind a
-`integration` build tag are not yet added — see
-[docs/future-improvements.md](docs/future-improvements.md).
+(`internal/rerank/rrf`, `internal/retrieval/graph`).
 
 ## Future improvements
 
