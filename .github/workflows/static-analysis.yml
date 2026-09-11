@@ -1,0 +1,72 @@
+name: static analysis
+
+on:
+  push:
+    # Run on all branches but not on tags.
+    # https://github.com/orgs/community/discussions/25615
+    branches:
+      - "**"
+    tags:
+      - "!**"
+  workflow_dispatch:
+
+env:
+  # https://github.com/golangci/golangci-lint/releases
+  GOLANGCI_LINT_VERSION: "v2.13.2"
+
+# Concurrent runs limit per branch level.
+# https://docs.github.com/en/enterprise-cloud@latest/actions/using-jobs/using-concurrency#example-using-concurrency-and-the-default-behavior
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Run Unit Tests
+        run: |
+          go test -race ./...
+
+  checks-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Check gofmt
+        run: |
+          files=$(go fmt ./...)
+          [ -z "$files" ] && exit 0
+
+          echo "Files not formatted:"
+          echo
+          for f in $files; do
+              echo "  $f"
+          done
+
+          exit 1
+
+      - name: Check Github workflow files
+        shell: bash
+        run: |
+          BIN_DIR=$(go env GOPATH)/bin/actionlint
+
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          mv ./actionlint "${BIN_DIR}"
+          ${BIN_DIR} -color
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
