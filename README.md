@@ -73,6 +73,15 @@ for each raw product → embed (Gemini) → insert into Postgres (`store.Product
 → upsert into the graph (`Product` vertex + `IN_CATEGORY`/`BY_BRAND`/`HAS_ATTRIBUTE`
 edges) → wire up any curated `RELATED_TO` edges between products.
 
+**Graph proximity scoring** (`internal/retrieval/graph`): `IN_CATEGORY`,
+`BY_BRAND`, and `HAS_ATTRIBUTE` edges score by hop count, 1-2 hops out from
+each seed product, category, or brand. `RELATED_TO` edges score by their
+curated `weight` (see [Ingesting more products](#ingesting-more-products))
+instead, summed over direct matches only; weight has no defined meaning
+across a multi-hop path. RRF fusion only reads each candidate's rank within
+a signal, not its raw score, so this only changes ordering inside the graph
+signal itself.
+
 ## Package layout
 
 - `internal/intent`: intent enum, entities, `Classifier` interface

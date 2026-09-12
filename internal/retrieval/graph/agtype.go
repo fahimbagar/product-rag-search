@@ -44,11 +44,12 @@ func ParseString(raw string) (string, error) {
 	return s, nil
 }
 
-// ParseInt parses a scalar agtype projection that is a bare number, e.g. `1`.
-func ParseInt(raw string) (int64, error) {
-	n, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+// ParseFloat parses a scalar agtype projection that is a bare number, e.g.
+// `1` from count(*) or `0.8` from sum(r.weight).
+func ParseFloat(raw string) (float64, error) {
+	n, err := strconv.ParseFloat(strings.TrimSpace(raw), 64)
 	if err != nil {
-		return 0, fmt.Errorf("agtype: parse int %q: %w", raw, err)
+		return 0, fmt.Errorf("agtype: parse float %q: %w", raw, err)
 	}
 	return n, nil
 }

@@ -67,17 +67,18 @@ func TestStore_Search(t *testing.T) {
 			name:  "aggregates proximity across seed ids category and brand",
 			query: retrieval.Query{SeedIDs: []string{seedID}, Category: "Footwear", Brand: "Nike", TopK: 1},
 			setup: func(mock pgxmock.PgxPoolIface) {
-				// proximityEdgeTypes order: IN_CATEGORY, BY_BRAND, HAS_ATTRIBUTE, RELATED_TO
+				// hopEdgeTypes order: IN_CATEGORY, BY_BRAND, HAS_ATTRIBUTE, then the
+				// weighted RELATED_TO query, then the category and brand label queries.
 				mock.ExpectQuery("cypher").WillReturnRows(rowsFor(idA, "2"))
 				mock.ExpectQuery("cypher").WillReturnRows(empty())
 				mock.ExpectQuery("cypher").WillReturnRows(empty())
-				mock.ExpectQuery("cypher").WillReturnRows(rowsFor(idB, "1"))
+				mock.ExpectQuery(regexp.QuoteMeta("sum(r.weight)")).WillReturnRows(rowsFor(idB, "0.75"))
 				mock.ExpectQuery("cypher").WillReturnRows(rowsFor(idA, "1")) // category
 				mock.ExpectQuery("cypher").WillReturnRows(rowsFor(idB, "5")) // brand
 			},
 			expectedErr: assert.NoError,
 			expected: []retrieval.Candidate{
-				{ProductID: idB, Rank: 1, Score: 6, Source: "graph"},
+				{ProductID: idB, Rank: 1, Score: 5.75, Source: "graph"},
 			},
 		},
 		{
@@ -142,7 +143,7 @@ func TestStore_Search(t *testing.T) {
 				rows := pgxmock.NewRows([]string{"product_id", "proximity"}).AddRow(`"`+idA+`"`, "not-a-number")
 				mock.ExpectQuery("cypher").WillReturnRows(rows)
 			},
-			expectedErr: errorContains("agtype: parse int"),
+			expectedErr: errorContains("agtype: parse float"),
 		},
 		{
 			name:  "propagates a row iteration error",

@@ -53,10 +53,10 @@ func NewStore(pool store.DB) *Store {
 func (s *Store) Name() string { return "graph" }
 
 // Search implements retrieval.Source: proximity is the number of
-// category/brand/attribute/related-product hops connecting a candidate to
-// the query's seed products, category, or brand.
+// category/brand/attribute hops plus the summed RELATED_TO edge weight
+// connecting a candidate to the query's seed products, category, or brand.
 func (s *Store) Search(ctx context.Context, q retrieval.Query) ([]retrieval.Candidate, error) {
-	proximity := map[string]int64{}
+	proximity := map[string]float64{}
 
 	var seedIDs []string
 	for _, id := range q.SeedIDs {
@@ -85,20 +85,20 @@ func (s *Store) Search(ctx context.Context, q retrieval.Query) ([]retrieval.Cand
 	return rankCandidates(proximity, s.Name(), q.TopK), nil
 }
 
-// proximityEdgeTypes are the edge labels that contribute to graph proximity
-// between products. Apache AGE 1.6.0's Cypher parser doesn't support
+// hopEdgeTypes are the unweighted edge labels that contribute to graph
+// proximity by hop count. Apache AGE 1.6.0's Cypher parser doesn't support
 // multi-type alternation in a single pattern (`[:A|B]`), so each type is
 // queried separately and the results are merged in Go.
-var proximityEdgeTypes = []string{"IN_CATEGORY", "BY_BRAND", "HAS_ATTRIBUTE", "RELATED_TO"}
+var hopEdgeTypes = []string{"IN_CATEGORY", "BY_BRAND", "HAS_ATTRIBUTE"}
 
-func (s *Store) accumulateBySeedIDs(ctx context.Context, seedIDs []string, proximity map[string]int64) error {
+func (s *Store) accumulateBySeedIDs(ctx context.Context, seedIDs []string, proximity map[string]float64) error {
 	quoted := make([]string, len(seedIDs))
 	for i, id := range seedIDs {
 		quoted[i] = "'" + id + "'"
 	}
 	idList := strings.Join(quoted, ", ")
 
-	for _, edgeType := range proximityEdgeTypes {
+	for _, edgeType := range hopEdgeTypes {
 		query := fmt.Sprintf(`
 			SELECT * FROM cypher('product_graph', $$
 				MATCH (seed:Product)-[:%s*1..2]-(related:Product)
@@ -111,10 +111,21 @@ func (s *Store) accumulateBySeedIDs(ctx context.Context, seedIDs []string, proxi
 			return err
 		}
 	}
-	return nil
+
+	// RELATED_TO is curated with a per-edge weight, so it contributes that
+	// weight directly rather than a flat per-hop count. Weight isn't
+	// well-defined across a multi-hop path, so this only follows direct edges.
+	query := fmt.Sprintf(`
+		SELECT * FROM cypher('product_graph', $$
+			MATCH (seed:Product)-[r:RELATED_TO]-(related:Product)
+			WHERE seed.product_id IN [%s] AND related.product_id <> seed.product_id
+			RETURN related.product_id, sum(r.weight)
+		$$) AS (product_id agtype, proximity agtype)
+	`, idList)
+	return s.runProximityQuery(ctx, query, proximity)
 }
 
-func (s *Store) accumulateByLabel(ctx context.Context, label, edgeType, name string, proximity map[string]int64) error {
+func (s *Store) accumulateByLabel(ctx context.Context, label, edgeType, name string, proximity map[string]float64) error {
 	query := fmt.Sprintf(`
 		SELECT * FROM cypher('product_graph', $$
 			MATCH (n:%s {name: '%s'})<-[:%s]-(related:Product)
@@ -125,7 +136,7 @@ func (s *Store) accumulateByLabel(ctx context.Context, label, edgeType, name str
 	return s.runProximityQuery(ctx, query, proximity)
 }
 
-func (s *Store) runProximityQuery(ctx context.Context, query string, proximity map[string]int64) error {
+func (s *Store) runProximityQuery(ctx context.Context, query string, proximity map[string]float64) error {
 	rows, err := s.pool.Query(ctx, query)
 	if err != nil {
 		return fmt.Errorf("graph search: %w", err)
@@ -141,7 +152,7 @@ func (s *Store) runProximityQuery(ctx context.Context, query string, proximity m
 		if err != nil {
 			return err
 		}
-		count, err := ParseInt(rawProximity)
+		count, err := ParseFloat(rawProximity)
 		if err != nil {
 			return err
 		}
@@ -150,7 +161,7 @@ func (s *Store) runProximityQuery(ctx context.Context, query string, proximity m
 	return rows.Err()
 }
 
-func rankCandidates(proximity map[string]int64, source string, topK int) []retrieval.Candidate {
+func rankCandidates(proximity map[string]float64, source string, topK int) []retrieval.Candidate {
 	if len(proximity) == 0 {
 		return nil
 	}
@@ -174,7 +185,7 @@ func rankCandidates(proximity map[string]int64, source string, topK int) []retri
 		candidates[i] = retrieval.Candidate{
 			ProductID: id,
 			Rank:      i + 1,
-			Score:     float64(proximity[id]),
+			Score:     proximity[id],
 			Source:    source,
 		}
 	}

@@ -86,17 +86,18 @@ func TestParseString(t *testing.T) {
 	}
 }
 
-func TestParseInt(t *testing.T) {
+func TestParseFloat(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name    string
 		raw     string
-		want    int64
+		want    float64
 		wantErr bool
 	}{
 		{name: "real count(n) fixture", raw: "1", want: 1},
 		{name: "larger count with surrounding whitespace", raw: "  42 ", want: 42},
+		{name: "real sum(r.weight) fixture", raw: "0.8", want: 0.8},
 		{name: "quoted string is an error", raw: `"1"`, wantErr: true},
 		{name: "empty string is an error", raw: "", wantErr: true},
 	}
@@ -105,7 +106,7 @@ func TestParseInt(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ParseInt(tt.raw)
+			got, err := ParseFloat(tt.raw)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
