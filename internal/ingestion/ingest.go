@@ -9,6 +9,7 @@ import (
 	"github.com/fahimbagar/product-rag-search/internal/embeddings"
 	"github.com/fahimbagar/product-rag-search/internal/retrieval/graph"
 	"github.com/fahimbagar/product-rag-search/internal/store"
+	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
 )
 
 // RawProduct is the input shape for a single product before embedding or
@@ -45,6 +46,9 @@ func NewIngester(embedder embeddings.Embedder, products store.ProductRepository,
 // Ingest embeds and stores each product, links it into the graph, then wires
 // up any explicitly curated related-product pairs.
 func (in *Ingester) Ingest(ctx context.Context, raw []RawProduct, related []RelatedPair) error {
+	logger := ctxlog.FromContext(ctx)
+	logger.Debugw("ingest started", "products", len(raw), "relations", len(related))
+
 	ids := make([]string, len(raw))
 
 	for i, p := range raw {
@@ -76,6 +80,7 @@ func (in *Ingester) Ingest(ctx context.Context, raw []RawProduct, related []Rela
 		}); err != nil {
 			return fmt.Errorf("ingest %q: graph upsert: %w", p.Title, err)
 		}
+		logger.Debugw("product ingested", "product_id", ids[i], "title", p.Title)
 	}
 
 	for _, r := range related {
@@ -86,6 +91,7 @@ func (in *Ingester) Ingest(ctx context.Context, raw []RawProduct, related []Rela
 			return fmt.Errorf("ingest: link related %d->%d: %w", r.FromIndex, r.ToIndex, err)
 		}
 	}
+	logger.Debugw("ingest completed", "products", len(ids), "relations", len(related))
 
 	return nil
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/fahimbagar/product-rag-search/internal/rerank"
 	"github.com/fahimbagar/product-rag-search/internal/retrieval"
 	"github.com/fahimbagar/product-rag-search/internal/store"
+	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
 )
 
 // Config tunes how many candidates each retrieval source returns and how
@@ -79,6 +80,8 @@ type Result struct {
 }
 
 func (p *Pipeline) Query(ctx context.Context, query string) (Result, error) {
+	logger := ctxlog.FromContext(ctx)
+
 	classifyStart := time.Now()
 	classification, err := p.classifier.Classify(ctx, query)
 	metrics.PipelineStageDuration.WithLabelValues("classify").Observe(time.Since(classifyStart).Seconds())
@@ -86,6 +89,7 @@ func (p *Pipeline) Query(ctx context.Context, query string) (Result, error) {
 		return Result{}, fmt.Errorf("pipeline: classify: %w", err)
 	}
 	metrics.IntentClassificationsTotal.WithLabelValues(string(classification.Intent)).Inc()
+	logger.Debugw("intent classified", "intent", classification.Intent, "confidence", classification.Confidence)
 
 	if classification.Intent == intent.OutOfScope {
 		deflectStart := time.Now()
@@ -94,6 +98,7 @@ func (p *Pipeline) Query(ctx context.Context, query string) (Result, error) {
 		if err != nil {
 			return Result{}, fmt.Errorf("pipeline: deflect: %w", err)
 		}
+		logger.Debugw("deflected out-of-scope query")
 		return Result{Intent: classification.Intent, Answer: answer}, nil
 	}
 
@@ -103,6 +108,7 @@ func (p *Pipeline) Query(ctx context.Context, query string) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("pipeline: embed: %w", err)
 	}
+	logger.Debugw("query embedded", "dimensions", len(embedding))
 
 	retrievalQuery := retrieval.Query{
 		Text:      query,
@@ -127,6 +133,7 @@ func (p *Pipeline) Query(ctx context.Context, query string) (Result, error) {
 		fused = fused[:p.cfg.FinalTopN]
 	}
 	recordSignalContribution(signals, fused)
+	logger.Debugw("candidates reranked", "fused", len(fused))
 
 	hydrateStart := time.Now()
 	products, err := p.hydrate(ctx, fused)
@@ -134,6 +141,7 @@ func (p *Pipeline) Query(ctx context.Context, query string) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("pipeline: hydrate: %w", err)
 	}
+	logger.Debugw("products hydrated", "count", len(products))
 	if len(products) == 0 {
 		return Result{Intent: classification.Intent, Answer: "I couldn't find any matching products."}, nil
 	}
@@ -157,6 +165,7 @@ func (p *Pipeline) Query(ctx context.Context, query string) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("pipeline: generate answer: %w", err)
 	}
+	logger.Debugw("answer generated", "cited_products", len(answer.CitedProductIDs))
 
 	cited := make(map[string]bool, len(answer.CitedProductIDs))
 	for _, id := range answer.CitedProductIDs {
@@ -180,6 +189,7 @@ func (p *Pipeline) Query(ctx context.Context, query string) (Result, error) {
 }
 
 func (p *Pipeline) searchAll(ctx context.Context, q retrieval.Query) ([][]retrieval.Candidate, error) {
+	logger := ctxlog.FromContext(ctx)
 	signals := make([][]retrieval.Candidate, len(p.sources))
 
 	g, gctx := errgroup.WithContext(ctx)
@@ -191,6 +201,7 @@ func (p *Pipeline) searchAll(ctx context.Context, q retrieval.Query) ([][]retrie
 			if err != nil {
 				return fmt.Errorf("%s: %w", source.Name(), err)
 			}
+			logger.Debugw("retrieval source completed", "source", source.Name(), "candidates", len(candidates))
 			signals[i] = candidates
 			return nil
 		})

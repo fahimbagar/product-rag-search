@@ -11,9 +11,11 @@ import (
 	"os"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/fahimbagar/product-rag-search/internal/app"
 	"github.com/fahimbagar/product-rag-search/internal/ingestion"
+	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
 )
 
 type seedProduct struct {
@@ -37,22 +39,42 @@ type seedFile struct {
 }
 
 func main() {
-	zapCfg := zap.NewProductionConfig()
-	zapCfg.OutputPaths = []string{"stdout"}
-	zapLogger, err := zapCfg.Build()
+	ctx := context.Background()
+
+	deps, err := app.Load(ctx)
+	if err != nil {
+		bootstrap, _ := newLogger(zapcore.InfoLevel)
+		bootstrap.Errorw("seed failed", "error", err)
+		os.Exit(1)
+	}
+	defer deps.Close()
+
+	logger, err := newLogger(deps.Config.LogLevel)
 	if err != nil {
 		os.Exit(1)
 	}
-	defer zapLogger.Sync()
-	logger := zapLogger.Sugar()
+	defer logger.Sync()
+	ctx = ctxlog.WithLogger(ctx, logger)
 
-	if err := run(logger); err != nil {
+	if err := run(ctx, logger, deps); err != nil {
 		logger.Errorw("seed failed", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run(logger *zap.SugaredLogger) error {
+func newLogger(level zapcore.Level) (*zap.SugaredLogger, error) {
+	cfg := zap.NewProductionConfig()
+	cfg.OutputPaths = []string{"stdout"}
+	cfg.Level = zap.NewAtomicLevelAt(level)
+
+	logger, err := cfg.Build()
+	if err != nil {
+		return nil, err
+	}
+	return logger.Sugar(), nil
+}
+
+func run(ctx context.Context, logger *zap.SugaredLogger, deps *app.Dependencies) error {
 	file := flag.String("file", "seed/products.json", "path to seed JSON file")
 	flag.Parse()
 
@@ -64,13 +86,6 @@ func run(logger *zap.SugaredLogger) error {
 	if err := json.Unmarshal(data, &sf); err != nil {
 		return fmt.Errorf("parse seed file: %w", err)
 	}
-
-	ctx := context.Background()
-	deps, err := app.Load(ctx)
-	if err != nil {
-		return err
-	}
-	defer deps.Close()
 
 	raw := make([]ingestion.RawProduct, len(sf.Products))
 	for i, p := range sf.Products {
