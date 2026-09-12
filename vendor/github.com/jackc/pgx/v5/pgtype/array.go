@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"strconv"
@@ -44,30 +45,39 @@ func cardinality(dimensions []ArrayDimension) int {
 	return elementCount
 }
 
-func (dst *arrayHeader) DecodeBinary(r *pgio.Reader) error {
-	// Each dimension is 8 bytes, which also bounds the Dimensions allocation below.
-	numDims := r.Count(8)
-	if err := r.Err(); err != nil {
-		return fmt.Errorf("array header: %w", err)
+func (dst *arrayHeader) DecodeBinary(m *Map, src []byte) (int, error) {
+	if len(src) < 12 {
+		return 0, fmt.Errorf("array header too short: %d", len(src))
 	}
+
+	rp := 0
+
+	numDims := int(binary.BigEndian.Uint32(src[rp:]))
+	rp += 4
 
 	if numDims > 6 {
-		return fmt.Errorf("array has too many dimensions: %d", numDims)
+		return 0, fmt.Errorf("array has too many dimensions: %d", numDims)
 	}
 
-	dst.ContainsNull = r.Uint32() == 1
-	dst.ElementOID = r.Uint32()
+	dst.ContainsNull = binary.BigEndian.Uint32(src[rp:]) == 1
+	rp += 4
 
+	dst.ElementOID = binary.BigEndian.Uint32(src[rp:])
+	rp += 4
+
+	if len(src) < 12+numDims*8 {
+		return 0, fmt.Errorf("array header too short for %d dimensions: %d", numDims, len(src))
+	}
 	dst.Dimensions = make([]ArrayDimension, numDims)
 	for i := range dst.Dimensions {
-		dst.Dimensions[i].Length = r.Int32()
-		dst.Dimensions[i].LowerBound = r.Int32()
+		dst.Dimensions[i].Length = int32(binary.BigEndian.Uint32(src[rp:]))
+		rp += 4
+
+		dst.Dimensions[i].LowerBound = int32(binary.BigEndian.Uint32(src[rp:]))
+		rp += 4
 	}
 
-	if err := r.Err(); err != nil {
-		return fmt.Errorf("array header: %w", err)
-	}
-	return nil
+	return rp, nil
 }
 
 func (src arrayHeader) EncodeBinary(buf []byte) []byte {
@@ -95,11 +105,7 @@ type untypedTextArray struct {
 	Dimensions []ArrayDimension
 }
 
-func parseUntypedTextArray(src string, delimiter byte) (*untypedTextArray, error) {
-	if delimiter == 0 {
-		delimiter = ','
-	}
-
+func parseUntypedTextArray(src string) (*untypedTextArray, error) {
 	dst := &untypedTextArray{
 		Elements:   []string{},
 		Quoted:     []bool{},
@@ -206,7 +212,7 @@ func parseUntypedTextArray(src string, delimiter byte) (*untypedTextArray, error
 				implicitDimensions[currentDim].Length++
 			}
 			currentDim++
-		case rune(delimiter):
+		case ',':
 		case '}':
 			currentDim--
 			if currentDim < counterDim {
@@ -214,7 +220,7 @@ func parseUntypedTextArray(src string, delimiter byte) (*untypedTextArray, error
 			}
 		default:
 			buf.UnreadRune()
-			value, quoted, err := arrayParseValue(buf, delimiter)
+			value, quoted, err := arrayParseValue(buf)
 			if err != nil {
 				return nil, fmt.Errorf("invalid array value: %w", err)
 			}
@@ -258,7 +264,7 @@ func skipWhitespace(buf *bytes.Buffer) {
 	}
 }
 
-func arrayParseValue(buf *bytes.Buffer, delimiter byte) (string, bool, error) {
+func arrayParseValue(buf *bytes.Buffer) (string, bool, error) {
 	r, _, err := buf.ReadRune()
 	if err != nil {
 		return "", false, err
@@ -277,7 +283,7 @@ func arrayParseValue(buf *bytes.Buffer, delimiter byte) (string, bool, error) {
 		}
 
 		switch r {
-		case rune(delimiter), '}':
+		case ',', '}':
 			buf.UnreadRune()
 			return s.String(), false, nil
 		}
@@ -364,12 +370,14 @@ func quoteArrayElement(src string) string {
 	return `"` + quoteArrayReplacer.Replace(src) + `"`
 }
 
-func quoteArrayElementIfNeeded(src string, delimiter byte) string {
-	if delimiter == 0 {
-		delimiter = ','
-	}
+func isSpace(ch byte) bool {
+	// see array_isspace:
+	// https://github.com/postgres/postgres/blob/master/src/backend/utils/adt/arrayfuncs.c
+	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' || ch == '\v' || ch == '\f'
+}
 
-	if src == "" || (len(src) == 4 && strings.EqualFold(src, "null")) || strings.ContainsAny(src, " \t\n\r\v\f") || strings.ContainsAny(src, `{},"\`) || strings.ContainsRune(src, rune(delimiter)) {
+func quoteArrayElementIfNeeded(src string) string {
+	if src == "" || (len(src) == 4 && strings.EqualFold(src, "null")) || isSpace(src[0]) || isSpace(src[len(src)-1]) || strings.ContainsAny(src, `{},"\`) {
 		return quoteArrayElement(src)
 	}
 	return src

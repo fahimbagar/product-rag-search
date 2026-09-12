@@ -36,10 +36,9 @@ type ConnConfig struct {
 	DescriptionCacheCapacity int
 
 	// DefaultQueryExecMode controls the default mode for executing queries. By default pgx uses the extended protocol
-	// and automatically prepares and caches prepared statements. This may be incompatible with proxies such as PgBouncer
-	// unless they are configured to support protocol-level prepared statements. In an incompatible configuration it may
-	// be preferable to use [QueryExecModeExec] or [QueryExecModeSimpleProtocol]. The same functionality can be controlled
-	// on a per query basis by passing a [QueryExecMode] as the first query argument.
+	// and automatically prepares and caches prepared statements. However, this may be incompatible with proxies such as
+	// PGBouncer. In this case it may be preferable to use [QueryExecModeExec] or [QueryExecModeSimpleProtocol]. The same
+	// functionality can be controlled on a per query basis by passing a [QueryExecMode] as the first query argument.
 	DefaultQueryExecMode QueryExecMode
 
 	createdByParseConfig bool // Used to enforce created by ParseConfig rule.
@@ -359,13 +358,8 @@ func (c *Conn) Prepare(ctx context.Context, name, sql string) (sd *pgconn.Statem
 	sd, err = c.pgConn.Prepare(ctx, psName, sql, nil)
 	if err != nil {
 		var pErr *pgconn.PrepareError
-		if errors.As(err, &pErr) && pErr.ParseComplete {
-			// The server-side statement was created under psName — the name sent in
-			// Parse. In the name == sql case psKey is the SQL text, and deallocating
-			// by it would close a nonexistent statement while leaking the real one.
-			// When Parse never completed no statement was created at all, so there
-			// is nothing to clean up.
-			c.failedDescribeStatement = psName
+		if errors.As(err, &pErr) {
+			c.failedDescribeStatement = psKey
 		}
 		return nil, err
 	}
@@ -481,9 +475,6 @@ func (c *Conn) Exec(ctx context.Context, sql string, arguments ...any) (pgconn.C
 	}
 
 	if err := c.deallocateInvalidatedCachedStatements(ctx); err != nil {
-		if c.queryTracer != nil {
-			c.queryTracer.TraceQueryEnd(ctx, c, TraceQueryEndData{Err: err})
-		}
 		return pgconn.CommandTag{}, err
 	}
 
@@ -751,7 +742,7 @@ type QueryRewriter interface {
 // collected before processing rather than processed while receiving each row. This avoids the possibility of the
 // application processing rows from a query that the server rejected. The CollectRows function is useful here.
 //
-// An implementer of QueryRewriter may be passed as the first element of args. It can rewrite the sql and change or
+// An implementor of QueryRewriter may be passed as the first element of args. It can rewrite the sql and change or
 // replace args. For example, NamedArgs is QueryRewriter that implements named arguments.
 //
 // For extra control over how the query is executed, the types QueryExecMode, QueryResultFormats, and
@@ -1314,7 +1305,7 @@ func (c *Conn) LoadType(ctx context.Context, typeName string) (*pgtype.Type, err
 
 	switch typtype {
 	case "b": // array
-		elementOID, delimiter, err := c.getArrayElementOIDAndDelimiter(ctx, oid)
+		elementOID, err := c.getArrayElementOID(ctx, oid)
 		if err != nil {
 			return nil, err
 		}
@@ -1324,7 +1315,7 @@ func (c *Conn) LoadType(ctx context.Context, typeName string) (*pgtype.Type, err
 			return nil, errors.New("array element OID not registered")
 		}
 
-		return &pgtype.Type{Name: typeName, OID: oid, Codec: &pgtype.ArrayCodec{ElementType: dt, Delimiter: delimiter}}, nil
+		return &pgtype.Type{Name: typeName, OID: oid, Codec: &pgtype.ArrayCodec{ElementType: dt}}, nil
 	case "c": // composite
 		fields, err := c.getCompositeFields(ctx, oid)
 		if err != nil {
@@ -1370,16 +1361,15 @@ func (c *Conn) LoadType(ctx context.Context, typeName string) (*pgtype.Type, err
 	}
 }
 
-func (c *Conn) getArrayElementOIDAndDelimiter(ctx context.Context, oid uint32) (uint32, byte, error) {
+func (c *Conn) getArrayElementOID(ctx context.Context, oid uint32) (uint32, error) {
 	var typelem uint32
-	var typdelim string
 
-	err := c.QueryRow(ctx, "select typelem, typdelim::text from pg_type where oid=$1", oid).Scan(&typelem, &typdelim)
+	err := c.QueryRow(ctx, "select typelem from pg_type where oid=$1", oid).Scan(&typelem)
 	if err != nil {
-		return 0, 0, err
+		return 0, err
 	}
 
-	return typelem, parseTypeDelimiter(typdelim), nil
+	return typelem, nil
 }
 
 func (c *Conn) getRangeElementOID(ctx context.Context, oid uint32) (uint32, error) {

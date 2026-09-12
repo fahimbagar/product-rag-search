@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"fmt"
 	"reflect"
 
@@ -38,16 +39,6 @@ type ArraySetter interface {
 // ArrayCodec is a codec for any array type.
 type ArrayCodec struct {
 	ElementType *Type
-	// Delimiter is the character PostgreSQL uses to separate array elements for this type.
-	// If unset, "," is used.
-	Delimiter byte
-}
-
-func (c *ArrayCodec) delimiter() byte {
-	if c.Delimiter == 0 {
-		return ','
-	}
-	return c.Delimiter
 }
 
 func (c *ArrayCodec) FormatSupported(format int16) bool {
@@ -127,10 +118,9 @@ func (p *encodePlanArrayCodecText) Encode(value any, buf []byte) (newBuf []byte,
 	var encodePlan EncodePlan
 	var lastElemType reflect.Type
 	inElemBuf := make([]byte, 0, 32)
-	delimiter := p.ac.delimiter()
 	for i := range elementCount {
 		if i > 0 {
-			buf = append(buf, delimiter)
+			buf = append(buf, ',')
 		}
 
 		for _, dec := range dimElemCounts {
@@ -165,7 +155,7 @@ func (p *encodePlanArrayCodecText) Encode(value any, buf []byte) (newBuf []byte,
 		if elemBuf == nil {
 			buf = append(buf, `NULL`...)
 		} else {
-			buf = append(buf, quoteArrayElementIfNeeded(string(elemBuf), delimiter)...)
+			buf = append(buf, quoteArrayElementIfNeeded(string(elemBuf))...)
 		}
 
 		for _, dec := range dimElemCounts {
@@ -271,9 +261,8 @@ func (c *ArrayCodec) PlanScan(m *Map, oid uint32, format int16, target any) Scan
 }
 
 func (c *ArrayCodec) decodeBinary(m *Map, arrayOID uint32, src []byte, array ArraySetter) error {
-	r := pgio.NewReader(src)
 	var arrayHeader arrayHeader
-	err := arrayHeader.DecodeBinary(r)
+	rp, err := arrayHeader.DecodeBinary(m, src)
 	if err != nil {
 		return err
 	}
@@ -282,8 +271,8 @@ func (c *ArrayCodec) decodeBinary(m *Map, arrayOID uint32, src []byte, array Arr
 	// Each element carries at minimum a 4-byte length header, so elementCount cannot exceed the
 	// remaining bytes / 4. This bounds the allocation in SetDimensions and the loop below against a
 	// malicious server claiming huge dimensions in a small message.
-	if maxElements := r.Remaining() / 4; elementCount > maxElements {
-		return fmt.Errorf("array claims %d elements but only %d bytes remain", elementCount, r.Remaining())
+	if maxElements := len(src[rp:]) / 4; elementCount > maxElements {
+		return fmt.Errorf("array claims %d elements but only %d bytes remain", elementCount, len(src[rp:]))
 	}
 
 	err = array.SetDimensions(arrayHeader.Dimensions)
@@ -292,7 +281,7 @@ func (c *ArrayCodec) decodeBinary(m *Map, arrayOID uint32, src []byte, array Arr
 	}
 
 	if elementCount == 0 {
-		return r.Finish()
+		return nil
 	}
 
 	elementScanPlan := c.ElementType.Codec.PlanScan(m, c.ElementType.OID, BinaryFormatCode, array.ScanIndex(0))
@@ -301,10 +290,19 @@ func (c *ArrayCodec) decodeBinary(m *Map, arrayOID uint32, src []byte, array Arr
 	}
 
 	for i := range elementCount {
+		if len(src[rp:]) < 4 {
+			return fmt.Errorf("array body truncated at element %d", i)
+		}
 		elem := array.ScanIndex(i)
-		elemSrc, _ := r.Value()
-		if err := r.Err(); err != nil {
-			return fmt.Errorf("array element %d: %w", i, err)
+		elemLen := int(int32(binary.BigEndian.Uint32(src[rp:])))
+		rp += 4
+		var elemSrc []byte
+		if elemLen >= 0 {
+			if len(src[rp:]) < elemLen {
+				return fmt.Errorf("array element %d length %d exceeds remaining %d bytes", i, elemLen, len(src[rp:]))
+			}
+			elemSrc = src[rp : rp+elemLen]
+			rp += elemLen
 		}
 		err = elementScanPlan.Scan(elemSrc, elem)
 		if err != nil {
@@ -312,19 +310,13 @@ func (c *ArrayCodec) decodeBinary(m *Map, arrayOID uint32, src []byte, array Arr
 		}
 	}
 
-	return r.Finish()
+	return nil
 }
 
 func (c *ArrayCodec) decodeText(m *Map, arrayOID uint32, src []byte, array ArraySetter) error {
-	uta, err := parseUntypedTextArray(string(src), c.delimiter())
+	uta, err := parseUntypedTextArray(string(src))
 	if err != nil {
 		return err
-	}
-
-	// The element loop below indexes the value sized by SetDimensions, so the
-	// dimensions and the parsed elements must agree.
-	if elementCount := cardinality(uta.Dimensions); elementCount != len(uta.Elements) {
-		return fmt.Errorf("array dimensions describe %d elements but %d were parsed", elementCount, len(uta.Elements))
 	}
 
 	err = array.SetDimensions(uta.Dimensions)

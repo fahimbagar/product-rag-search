@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -171,30 +172,32 @@ func (PathCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan
 type scanPlanBinaryPathToPathScanner struct{}
 
 func (scanPlanBinaryPathToPathScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(PathScanner)
+	scanner := (dst).(PathScanner)
 
 	if src == nil {
 		return scanner.ScanPath(Path{})
 	}
 
-	r := pgio.NewReader(src)
+	if len(src) < 5 {
+		return fmt.Errorf("invalid length for Path: %v", len(src))
+	}
 
-	closed := r.Byte() == 1
-	// Each point is two float64s.
-	pointCount := r.Count(16)
-	if err := r.Err(); err != nil {
-		return fmt.Errorf("invalid length for Path: %w", err)
+	closed := src[0] == 1
+	pointCount := int(binary.BigEndian.Uint32(src[1:]))
+
+	rp := 5
+
+	if 5+pointCount*16 != len(src) {
+		return fmt.Errorf("invalid length for Path with %d points: %v", pointCount, len(src))
 	}
 
 	points := make([]Vec2, pointCount)
 	for i := range points {
-		x := r.Uint64()
-		y := r.Uint64()
+		x := binary.BigEndian.Uint64(src[rp:])
+		rp += 8
+		y := binary.BigEndian.Uint64(src[rp:])
+		rp += 8
 		points[i] = Vec2{math.Float64frombits(x), math.Float64frombits(y)}
-	}
-
-	if err := r.Finish(); err != nil {
-		return fmt.Errorf("invalid length for Path with %d points: %w", pointCount, err)
 	}
 
 	return scanner.ScanPath(Path{
@@ -207,7 +210,7 @@ func (scanPlanBinaryPathToPathScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToPathScanner struct{}
 
 func (scanPlanTextAnyToPathScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(PathScanner)
+	scanner := (dst).(PathScanner)
 
 	if src == nil {
 		return scanner.ScanPath(Path{})

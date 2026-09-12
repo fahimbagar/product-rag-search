@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -156,29 +157,30 @@ func (PolygonCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanP
 type scanPlanBinaryPolygonToPolygonScanner struct{}
 
 func (scanPlanBinaryPolygonToPolygonScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(PolygonScanner)
+	scanner := (dst).(PolygonScanner)
 
 	if src == nil {
 		return scanner.ScanPolygon(Polygon{})
 	}
 
-	r := pgio.NewReader(src)
+	if len(src) < 5 {
+		return fmt.Errorf("invalid length for polygon: %v", len(src))
+	}
 
-	// Each point is two float64s.
-	pointCount := r.Count(16)
-	if err := r.Err(); err != nil {
-		return fmt.Errorf("invalid length for polygon: %w", err)
+	pointCount := int(binary.BigEndian.Uint32(src))
+	rp := 4
+
+	if 4+pointCount*16 != len(src) {
+		return fmt.Errorf("invalid length for Polygon with %d points: %v", pointCount, len(src))
 	}
 
 	points := make([]Vec2, pointCount)
 	for i := range points {
-		x := r.Uint64()
-		y := r.Uint64()
+		x := binary.BigEndian.Uint64(src[rp:])
+		rp += 8
+		y := binary.BigEndian.Uint64(src[rp:])
+		rp += 8
 		points[i] = Vec2{math.Float64frombits(x), math.Float64frombits(y)}
-	}
-
-	if err := r.Finish(); err != nil {
-		return fmt.Errorf("invalid length for Polygon with %d points: %w", pointCount, err)
 	}
 
 	return scanner.ScanPolygon(Polygon{
@@ -190,7 +192,7 @@ func (scanPlanBinaryPolygonToPolygonScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToPolygonScanner struct{}
 
 func (scanPlanTextAnyToPolygonScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(PolygonScanner)
+	scanner := (dst).(PolygonScanner)
 
 	if src == nil {
 		return scanner.ScanPolygon(Polygon{})

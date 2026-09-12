@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
@@ -174,21 +175,19 @@ func (IntervalCodec) PlanScan(m *Map, oid uint32, format int16, target any) Scan
 type scanPlanBinaryIntervalToIntervalScanner struct{}
 
 func (scanPlanBinaryIntervalToIntervalScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(IntervalScanner)
+	scanner := (dst).(IntervalScanner)
 
 	if src == nil {
 		return scanner.ScanInterval(Interval{})
 	}
 
-	r := pgio.NewReader(src)
-
-	microseconds := r.Int64()
-	days := r.Int32()
-	months := r.Int32()
-
-	if err := r.Finish(); err != nil {
-		return fmt.Errorf("Received an invalid size for an interval: %w", err)
+	if len(src) != 16 {
+		return fmt.Errorf("Received an invalid size for an interval: %d", len(src))
 	}
+
+	microseconds := int64(binary.BigEndian.Uint64(src))
+	days := int32(binary.BigEndian.Uint32(src[8:]))
+	months := int32(binary.BigEndian.Uint32(src[12:]))
 
 	return scanner.ScanInterval(Interval{Microseconds: microseconds, Days: days, Months: months, Valid: true})
 }
@@ -196,7 +195,7 @@ func (scanPlanBinaryIntervalToIntervalScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToIntervalScanner struct{}
 
 func (scanPlanTextAnyToIntervalScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(IntervalScanner)
+	scanner := (dst).(IntervalScanner)
 
 	if src == nil {
 		return scanner.ScanInterval(Interval{})
@@ -233,7 +232,7 @@ func (scanPlanTextAnyToIntervalScanner) Scan(src []byte, dst any) error {
 		}
 
 		var negative bool
-		if len(timeParts[0]) > 0 && timeParts[0][0] == '-' {
+		if timeParts[0][0] == '-' {
 			negative = true
 			timeParts[0] = timeParts[0][1:]
 		}

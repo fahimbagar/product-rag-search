@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -250,13 +251,12 @@ func (scanPlanBinaryUint64ToUint64) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint64: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for uint64: %v", len(src))
 	}
 
-	p := dst.(*uint64)
-	*p = raw
+	p := (dst).(*uint64)
+	*p = binary.BigEndian.Uint64(src)
 
 	return nil
 }
@@ -264,7 +264,7 @@ func (scanPlanBinaryUint64ToUint64) Scan(src []byte, dst any) error {
 type scanPlanBinaryUint64ToUint64Scanner struct{}
 
 func (scanPlanBinaryUint64ToUint64Scanner) Scan(src []byte, dst any) error {
-	s, ok := dst.(Uint64Scanner)
+	s, ok := (dst).(Uint64Scanner)
 	if !ok {
 		return ErrScanTargetTypeChanged
 	}
@@ -273,10 +273,11 @@ func (scanPlanBinaryUint64ToUint64Scanner) Scan(src []byte, dst any) error {
 		return s.ScanUint64(Uint64{})
 	}
 
-	n, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint64: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for uint64: %v", len(src))
 	}
+
+	n := binary.BigEndian.Uint64(src)
 
 	return s.ScanUint64(Uint64{Uint64: n, Valid: true})
 }
@@ -284,7 +285,7 @@ func (scanPlanBinaryUint64ToUint64Scanner) Scan(src []byte, dst any) error {
 type scanPlanBinaryUint64ToTextScanner struct{}
 
 func (scanPlanBinaryUint64ToTextScanner) Scan(src []byte, dst any) error {
-	s, ok := dst.(TextScanner)
+	s, ok := (dst).(TextScanner)
 	if !ok {
 		return ErrScanTargetTypeChanged
 	}
@@ -293,18 +294,18 @@ func (scanPlanBinaryUint64ToTextScanner) Scan(src []byte, dst any) error {
 		return s.ScanText(Text{})
 	}
 
-	n, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint64: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for uint64: %v", len(src))
 	}
 
+	n := binary.BigEndian.Uint64(src)
 	return s.ScanText(Text{String: strconv.FormatUint(n, 10), Valid: true})
 }
 
 type scanPlanTextAnyToUint64Scanner struct{}
 
 func (scanPlanTextAnyToUint64Scanner) Scan(src []byte, dst any) error {
-	s, ok := dst.(Uint64Scanner)
+	s, ok := (dst).(Uint64Scanner)
 	if !ok {
 		return ErrScanTargetTypeChanged
 	}

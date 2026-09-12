@@ -3,7 +3,6 @@ package pgxpool
 import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type errRows struct {
@@ -19,7 +18,6 @@ func (e errRows) Scan(dest ...any) error                     { return e.err }
 func (e errRows) Values() ([]any, error)                     { return nil, e.err }
 func (e errRows) RawValues() [][]byte                        { return nil }
 func (e errRows) Conn() *pgx.Conn                            { return nil }
-func (e errRows) TypeMap() *pgtype.Map                       { return nil }
 
 type errRow struct {
 	err error
@@ -90,10 +88,6 @@ func (rows *poolRows) RawValues() [][]byte {
 
 func (rows *poolRows) Conn() *pgx.Conn {
 	return rows.r.Conn()
-}
-
-func (rows *poolRows) TypeMap() *pgtype.Map {
-	return rows.r.TypeMap()
 }
 
 type poolRow struct {

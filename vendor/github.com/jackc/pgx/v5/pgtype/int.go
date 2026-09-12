@@ -4,6 +4,7 @@ package pgtype
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -302,9 +303,8 @@ func (scanPlanBinaryInt2ToInt8) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("int2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for int2: %v", len(src))
 	}
 
 	p, ok := (dst).(*int8)
@@ -312,7 +312,7 @@ func (scanPlanBinaryInt2ToInt8) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int16(raw)
+	n := int16(binary.BigEndian.Uint16(src))
 	if n < math.MinInt8 {
 		return fmt.Errorf("%d is less than minimum value for int8", n)
 	} else if n > math.MaxInt8 {
@@ -331,9 +331,8 @@ func (scanPlanBinaryInt2ToUint8) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for uint2: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint8)
@@ -341,7 +340,7 @@ func (scanPlanBinaryInt2ToUint8) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int16(raw)
+	n := int16(binary.BigEndian.Uint16(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint8", n)
 	}
@@ -362,9 +361,8 @@ func (scanPlanBinaryInt2ToInt16) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("int2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for int2: %v", len(src))
 	}
 
 	p, ok := (dst).(*int16)
@@ -372,7 +370,7 @@ func (scanPlanBinaryInt2ToInt16) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	*p = int16(raw)
+	*p = int16(binary.BigEndian.Uint16(src))
 
 	return nil
 }
@@ -384,9 +382,8 @@ func (scanPlanBinaryInt2ToUint16) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for uint2: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint16)
@@ -394,7 +391,7 @@ func (scanPlanBinaryInt2ToUint16) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int16(raw)
+	n := int16(binary.BigEndian.Uint16(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint16", n)
 	}
@@ -411,9 +408,8 @@ func (scanPlanBinaryInt2ToInt32) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("int2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for int2: %v", len(src))
 	}
 
 	p, ok := (dst).(*int32)
@@ -421,7 +417,7 @@ func (scanPlanBinaryInt2ToInt32) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	*p = int32(int16(raw))
+	*p = int32(int16(binary.BigEndian.Uint16(src)))
 
 	return nil
 }
@@ -433,9 +429,8 @@ func (scanPlanBinaryInt2ToUint32) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for uint2: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint32)
@@ -443,7 +438,7 @@ func (scanPlanBinaryInt2ToUint32) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int16(raw)
+	n := int16(binary.BigEndian.Uint16(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint32", n)
 	}
@@ -460,9 +455,8 @@ func (scanPlanBinaryInt2ToInt64) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("int2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for int2: %v", len(src))
 	}
 
 	p, ok := (dst).(*int64)
@@ -470,7 +464,7 @@ func (scanPlanBinaryInt2ToInt64) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	*p = int64(int16(raw))
+	*p = int64(int16(binary.BigEndian.Uint16(src)))
 
 	return nil
 }
@@ -482,9 +476,8 @@ func (scanPlanBinaryInt2ToUint64) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for uint2: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint64)
@@ -492,7 +485,7 @@ func (scanPlanBinaryInt2ToUint64) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int16(raw)
+	n := int16(binary.BigEndian.Uint16(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint64", n)
 	}
@@ -509,9 +502,8 @@ func (scanPlanBinaryInt2ToInt) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("int2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for int2: %v", len(src))
 	}
 
 	p, ok := (dst).(*int)
@@ -519,7 +511,7 @@ func (scanPlanBinaryInt2ToInt) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	*p = int(int16(raw))
+	*p = int(int16(binary.BigEndian.Uint16(src)))
 
 	return nil
 }
@@ -531,9 +523,8 @@ func (scanPlanBinaryInt2ToUint) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for uint2: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint)
@@ -541,7 +532,7 @@ func (scanPlanBinaryInt2ToUint) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(int16(raw))
+	n := int64(int16(binary.BigEndian.Uint16(src)))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint", n)
 	}
@@ -563,12 +554,11 @@ func (scanPlanBinaryInt2ToInt64Scanner) Scan(src []byte, dst any) error {
 		return s.ScanInt64(Int8{})
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("int2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for int2: %v", len(src))
 	}
 
-	n := int64(int16(raw))
+	n := int64(int16(binary.BigEndian.Uint16(src)))
 
 	return s.ScanInt64(Int8{Int64: n, Valid: true})
 }
@@ -585,12 +575,11 @@ func (scanPlanBinaryInt2ToTextScanner) Scan(src []byte, dst any) error {
 		return s.ScanText(Text{})
 	}
 
-	raw, err := pgio.Uint16Exact(src)
-	if err != nil {
-		return fmt.Errorf("int2: %w", err)
+	if len(src) != 2 {
+		return fmt.Errorf("invalid length for int2: %v", len(src))
 	}
 
-	n := int64(int16(raw))
+	n := int64(int16(binary.BigEndian.Uint16(src)))
 
 	return s.ScanText(Text{String: strconv.FormatInt(n, 10), Valid: true})
 }
@@ -877,9 +866,8 @@ func (scanPlanBinaryInt4ToInt8) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("int4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for int4: %v", len(src))
 	}
 
 	p, ok := (dst).(*int8)
@@ -887,7 +875,7 @@ func (scanPlanBinaryInt4ToInt8) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int32(raw)
+	n := int32(binary.BigEndian.Uint32(src))
 	if n < math.MinInt8 {
 		return fmt.Errorf("%d is less than minimum value for int8", n)
 	} else if n > math.MaxInt8 {
@@ -906,9 +894,8 @@ func (scanPlanBinaryInt4ToUint8) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for uint4: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint8)
@@ -916,7 +903,7 @@ func (scanPlanBinaryInt4ToUint8) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int32(raw)
+	n := int32(binary.BigEndian.Uint32(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint8", n)
 	}
@@ -937,9 +924,8 @@ func (scanPlanBinaryInt4ToInt16) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("int4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for int4: %v", len(src))
 	}
 
 	p, ok := (dst).(*int16)
@@ -947,7 +933,7 @@ func (scanPlanBinaryInt4ToInt16) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int32(raw)
+	n := int32(binary.BigEndian.Uint32(src))
 	if n < math.MinInt16 {
 		return fmt.Errorf("%d is less than minimum value for int16", n)
 	} else if n > math.MaxInt16 {
@@ -966,9 +952,8 @@ func (scanPlanBinaryInt4ToUint16) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for uint4: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint16)
@@ -976,7 +961,7 @@ func (scanPlanBinaryInt4ToUint16) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int32(raw)
+	n := int32(binary.BigEndian.Uint32(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint16", n)
 	}
@@ -997,9 +982,8 @@ func (scanPlanBinaryInt4ToInt32) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("int4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for int4: %v", len(src))
 	}
 
 	p, ok := (dst).(*int32)
@@ -1007,7 +991,7 @@ func (scanPlanBinaryInt4ToInt32) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	*p = int32(raw)
+	*p = int32(binary.BigEndian.Uint32(src))
 
 	return nil
 }
@@ -1019,9 +1003,8 @@ func (scanPlanBinaryInt4ToUint32) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for uint4: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint32)
@@ -1029,7 +1012,7 @@ func (scanPlanBinaryInt4ToUint32) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int32(raw)
+	n := int32(binary.BigEndian.Uint32(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint32", n)
 	}
@@ -1046,9 +1029,8 @@ func (scanPlanBinaryInt4ToInt64) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("int4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for int4: %v", len(src))
 	}
 
 	p, ok := (dst).(*int64)
@@ -1056,7 +1038,7 @@ func (scanPlanBinaryInt4ToInt64) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	*p = int64(int32(raw))
+	*p = int64(int32(binary.BigEndian.Uint32(src)))
 
 	return nil
 }
@@ -1068,9 +1050,8 @@ func (scanPlanBinaryInt4ToUint64) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for uint4: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint64)
@@ -1078,7 +1059,7 @@ func (scanPlanBinaryInt4ToUint64) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int32(raw)
+	n := int32(binary.BigEndian.Uint32(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint64", n)
 	}
@@ -1095,9 +1076,8 @@ func (scanPlanBinaryInt4ToInt) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("int4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for int4: %v", len(src))
 	}
 
 	p, ok := (dst).(*int)
@@ -1105,7 +1085,7 @@ func (scanPlanBinaryInt4ToInt) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	*p = int(int32(raw))
+	*p = int(int32(binary.BigEndian.Uint32(src)))
 
 	return nil
 }
@@ -1117,9 +1097,8 @@ func (scanPlanBinaryInt4ToUint) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for uint4: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint)
@@ -1127,7 +1106,7 @@ func (scanPlanBinaryInt4ToUint) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(int32(raw))
+	n := int64(int32(binary.BigEndian.Uint32(src)))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint", n)
 	}
@@ -1149,12 +1128,11 @@ func (scanPlanBinaryInt4ToInt64Scanner) Scan(src []byte, dst any) error {
 		return s.ScanInt64(Int8{})
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("int4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for int4: %v", len(src))
 	}
 
-	n := int64(int32(raw))
+	n := int64(int32(binary.BigEndian.Uint32(src)))
 
 	return s.ScanInt64(Int8{Int64: n, Valid: true})
 }
@@ -1171,12 +1149,11 @@ func (scanPlanBinaryInt4ToTextScanner) Scan(src []byte, dst any) error {
 		return s.ScanText(Text{})
 	}
 
-	raw, err := pgio.Uint32Exact(src)
-	if err != nil {
-		return fmt.Errorf("int4: %w", err)
+	if len(src) != 4 {
+		return fmt.Errorf("invalid length for int4: %v", len(src))
 	}
 
-	n := int64(int32(raw))
+	n := int64(int32(binary.BigEndian.Uint32(src)))
 
 	return s.ScanText(Text{String: strconv.FormatInt(n, 10), Valid: true})
 }
@@ -1238,7 +1215,7 @@ func (dst *Int8) Scan(src any) error {
 	}
 
 	if n < math.MinInt64 {
-		return fmt.Errorf("%d is less than minimum value for Int8", n)
+		return fmt.Errorf("%d is greater than maximum value for Int8", n)
 	}
 	if n > math.MaxInt64 {
 		return fmt.Errorf("%d is greater than maximum value for Int8", n)
@@ -1463,9 +1440,8 @@ func (scanPlanBinaryInt8ToInt8) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("int8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for int8: %v", len(src))
 	}
 
 	p, ok := (dst).(*int8)
@@ -1473,7 +1449,7 @@ func (scanPlanBinaryInt8ToInt8) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(raw)
+	n := int64(binary.BigEndian.Uint64(src))
 	if n < math.MinInt8 {
 		return fmt.Errorf("%d is less than minimum value for int8", n)
 	} else if n > math.MaxInt8 {
@@ -1492,9 +1468,8 @@ func (scanPlanBinaryInt8ToUint8) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for uint8: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint8)
@@ -1502,7 +1477,7 @@ func (scanPlanBinaryInt8ToUint8) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(raw)
+	n := int64(binary.BigEndian.Uint64(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint8", n)
 	}
@@ -1523,9 +1498,8 @@ func (scanPlanBinaryInt8ToInt16) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("int8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for int8: %v", len(src))
 	}
 
 	p, ok := (dst).(*int16)
@@ -1533,7 +1507,7 @@ func (scanPlanBinaryInt8ToInt16) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(raw)
+	n := int64(binary.BigEndian.Uint64(src))
 	if n < math.MinInt16 {
 		return fmt.Errorf("%d is less than minimum value for int16", n)
 	} else if n > math.MaxInt16 {
@@ -1552,9 +1526,8 @@ func (scanPlanBinaryInt8ToUint16) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for uint8: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint16)
@@ -1562,7 +1535,7 @@ func (scanPlanBinaryInt8ToUint16) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(raw)
+	n := int64(binary.BigEndian.Uint64(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint16", n)
 	}
@@ -1583,9 +1556,8 @@ func (scanPlanBinaryInt8ToInt32) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("int8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for int8: %v", len(src))
 	}
 
 	p, ok := (dst).(*int32)
@@ -1593,7 +1565,7 @@ func (scanPlanBinaryInt8ToInt32) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(raw)
+	n := int64(binary.BigEndian.Uint64(src))
 	if n < math.MinInt32 {
 		return fmt.Errorf("%d is less than minimum value for int32", n)
 	} else if n > math.MaxInt32 {
@@ -1612,9 +1584,8 @@ func (scanPlanBinaryInt8ToUint32) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for uint8: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint32)
@@ -1622,7 +1593,7 @@ func (scanPlanBinaryInt8ToUint32) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(raw)
+	n := int64(binary.BigEndian.Uint64(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint32", n)
 	}
@@ -1643,9 +1614,8 @@ func (scanPlanBinaryInt8ToInt64) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("int8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for int8: %v", len(src))
 	}
 
 	p, ok := (dst).(*int64)
@@ -1653,7 +1623,7 @@ func (scanPlanBinaryInt8ToInt64) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	*p = int64(raw)
+	*p = int64(binary.BigEndian.Uint64(src))
 
 	return nil
 }
@@ -1665,9 +1635,8 @@ func (scanPlanBinaryInt8ToUint64) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for uint8: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint64)
@@ -1675,7 +1644,7 @@ func (scanPlanBinaryInt8ToUint64) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(raw)
+	n := int64(binary.BigEndian.Uint64(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint64", n)
 	}
@@ -1692,9 +1661,8 @@ func (scanPlanBinaryInt8ToInt) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("int8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for int8: %v", len(src))
 	}
 
 	p, ok := (dst).(*int)
@@ -1702,7 +1670,7 @@ func (scanPlanBinaryInt8ToInt) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(raw)
+	n := int64(binary.BigEndian.Uint64(src))
 	if n < math.MinInt {
 		return fmt.Errorf("%d is less than minimum value for int", n)
 	} else if n > math.MaxInt {
@@ -1721,9 +1689,8 @@ func (scanPlanBinaryInt8ToUint) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for uint8: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint)
@@ -1731,7 +1698,7 @@ func (scanPlanBinaryInt8ToUint) Scan(src []byte, dst any) error {
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(int64(raw))
+	n := int64(int64(binary.BigEndian.Uint64(src)))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint", n)
 	}
@@ -1757,12 +1724,11 @@ func (scanPlanBinaryInt8ToInt64Scanner) Scan(src []byte, dst any) error {
 		return s.ScanInt64(Int8{})
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("int8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for int8: %v", len(src))
 	}
 
-	n := int64(int64(raw))
+	n := int64(int64(binary.BigEndian.Uint64(src)))
 
 	return s.ScanInt64(Int8{Int64: n, Valid: true})
 }
@@ -1779,12 +1745,11 @@ func (scanPlanBinaryInt8ToTextScanner) Scan(src []byte, dst any) error {
 		return s.ScanText(Text{})
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("int8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for int8: %v", len(src))
 	}
 
-	n := int64(int64(raw))
+	n := int64(int64(binary.BigEndian.Uint64(src)))
 
 	return s.ScanText(Text{String: strconv.FormatInt(n, 10), Valid: true})
 }

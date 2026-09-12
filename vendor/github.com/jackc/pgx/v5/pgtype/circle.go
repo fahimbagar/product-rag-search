@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -160,21 +161,19 @@ func (c CircleCodec) DecodeValue(m *Map, oid uint32, format int16, src []byte) (
 type scanPlanBinaryCircleToCircleScanner struct{}
 
 func (scanPlanBinaryCircleToCircleScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(CircleScanner)
+	scanner := (dst).(CircleScanner)
 
 	if src == nil {
 		return scanner.ScanCircle(Circle{})
 	}
 
-	rd := pgio.NewReader(src)
-
-	x := rd.Uint64()
-	y := rd.Uint64()
-	r := rd.Uint64()
-
-	if err := rd.Finish(); err != nil {
-		return fmt.Errorf("Circle: %w", err)
+	if len(src) != 24 {
+		return fmt.Errorf("invalid length for Circle: %v", len(src))
 	}
+
+	x := binary.BigEndian.Uint64(src)
+	y := binary.BigEndian.Uint64(src[8:])
+	r := binary.BigEndian.Uint64(src[16:])
 
 	return scanner.ScanCircle(Circle{
 		P:     Vec2{math.Float64frombits(x), math.Float64frombits(y)},
@@ -186,7 +185,7 @@ func (scanPlanBinaryCircleToCircleScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToCircleScanner struct{}
 
 func (scanPlanTextAnyToCircleScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(CircleScanner)
+	scanner := (dst).(CircleScanner)
 
 	if src == nil {
 		return scanner.ScanCircle(Circle{})

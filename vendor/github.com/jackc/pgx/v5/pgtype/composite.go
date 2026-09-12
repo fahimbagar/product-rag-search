@@ -130,7 +130,7 @@ type scanPlanBinaryCompositeToCompositeIndexScanner struct {
 }
 
 func (plan *scanPlanBinaryCompositeToCompositeIndexScanner) Scan(src []byte, target any) error {
-	targetScanner := target.(CompositeIndexScanner)
+	targetScanner := (target).(CompositeIndexScanner)
 
 	if src == nil {
 		return targetScanner.ScanNull()
@@ -139,17 +139,14 @@ func (plan *scanPlanBinaryCompositeToCompositeIndexScanner) Scan(src []byte, tar
 	scanner := NewCompositeBinaryScanner(plan.m, src)
 	for i, field := range plan.cc.Fields {
 		if scanner.Next() {
-			fieldTarget, err := compositeFieldTarget(targetScanner, i)
-			if err != nil {
-				return err
-			}
+			fieldTarget := targetScanner.ScanIndex(i)
 			if fieldTarget != nil {
 				fieldPlan := plan.m.PlanScan(field.Type.OID, BinaryFormatCode, fieldTarget)
 				if fieldPlan == nil {
 					return fmt.Errorf("unable to encode %v into OID %d in binary format", field, field.Type.OID)
 				}
 
-				err = fieldPlan.Scan(scanner.Bytes(), fieldTarget)
+				err := fieldPlan.Scan(scanner.Bytes(), fieldTarget)
 				if err != nil {
 					return err
 				}
@@ -172,7 +169,7 @@ type scanPlanTextCompositeToCompositeIndexScanner struct {
 }
 
 func (plan *scanPlanTextCompositeToCompositeIndexScanner) Scan(src []byte, target any) error {
-	targetScanner := target.(CompositeIndexScanner)
+	targetScanner := (target).(CompositeIndexScanner)
 
 	if src == nil {
 		return targetScanner.ScanNull()
@@ -280,8 +277,9 @@ func (c *CompositeCodec) DecodeValue(m *Map, oid uint32, format int16, src []byt
 }
 
 type CompositeBinaryScanner struct {
-	m *Map
-	r *pgio.Reader
+	m   *Map
+	rp  int
+	src []byte
 
 	fieldCount int32
 	fieldBytes []byte
@@ -291,18 +289,19 @@ type CompositeBinaryScanner struct {
 
 // NewCompositeBinaryScanner a scanner over a binary encoded composite value.
 func NewCompositeBinaryScanner(m *Map, src []byte) *CompositeBinaryScanner {
-	r := pgio.NewReader(src)
-
-	// Each field requires at least 8 bytes: 4 for the OID and 4 for the length prefix.
-	fieldCount := r.Count(8)
-	if err := r.Err(); err != nil {
-		return &CompositeBinaryScanner{err: fmt.Errorf("Record incomplete: %w", err)}
+	rp := 0
+	if len(src[rp:]) < 4 {
+		return &CompositeBinaryScanner{err: fmt.Errorf("Record incomplete %v", src)}
 	}
+
+	fieldCount := int32(binary.BigEndian.Uint32(src[rp:]))
+	rp += 4
 
 	return &CompositeBinaryScanner{
 		m:          m,
-		r:          r,
-		fieldCount: int32(fieldCount),
+		rp:         rp,
+		src:        src,
+		fieldCount: fieldCount,
 	}
 }
 
@@ -313,15 +312,29 @@ func (cfs *CompositeBinaryScanner) Next() bool {
 		return false
 	}
 
-	if cfs.r.Remaining() == 0 {
+	if cfs.rp == len(cfs.src) {
 		return false
 	}
 
-	cfs.fieldOID = cfs.r.Uint32()
-	cfs.fieldBytes, _ = cfs.r.Value()
-	if err := cfs.r.Err(); err != nil {
-		cfs.err = fmt.Errorf("Record incomplete: %w", err)
+	if len(cfs.src[cfs.rp:]) < 8 {
+		cfs.err = fmt.Errorf("Record incomplete %v", cfs.src)
 		return false
+	}
+	cfs.fieldOID = binary.BigEndian.Uint32(cfs.src[cfs.rp:])
+	cfs.rp += 4
+
+	fieldLen := int(int32(binary.BigEndian.Uint32(cfs.src[cfs.rp:])))
+	cfs.rp += 4
+
+	if fieldLen >= 0 {
+		if len(cfs.src[cfs.rp:]) < fieldLen {
+			cfs.err = fmt.Errorf("Record incomplete rp=%d src=%v", cfs.rp, cfs.src)
+			return false
+		}
+		cfs.fieldBytes = cfs.src[cfs.rp : cfs.rp+fieldLen]
+		cfs.rp += fieldLen
+	} else {
+		cfs.fieldBytes = nil
 	}
 
 	return true
@@ -329,17 +342,6 @@ func (cfs *CompositeBinaryScanner) Next() bool {
 
 func (cfs *CompositeBinaryScanner) FieldCount() int {
 	return int(cfs.fieldCount)
-}
-
-// compositeFieldTarget returns the scan target for field i. CompositeFields is
-// a slice, so indexing past its end would panic. A source with more fields than
-// the destination is a mismatch that must be reported as an error.
-func compositeFieldTarget(targetScanner CompositeIndexScanner, i int) (any, error) {
-	if cf, ok := targetScanner.(CompositeFields); ok && i >= len(cf) {
-		return nil, fmt.Errorf("cannot scan composite field %d into CompositeFields of length %d", i, len(cf))
-	}
-
-	return targetScanner.ScanIndex(i), nil
 }
 
 // Bytes returns the bytes of the field most recently read by Scan().
@@ -394,7 +396,7 @@ func (cfs *CompositeTextScanner) Next() bool {
 		return false
 	}
 
-	if cfs.rp >= len(cfs.src) {
+	if cfs.rp == len(cfs.src) {
 		return false
 	}
 
@@ -408,18 +410,12 @@ func (cfs *CompositeTextScanner) Next() bool {
 		cfs.fieldBytes = make([]byte, 0, 16)
 	quotedValue:
 		for {
-			// A quote or escape may have consumed the final ')', leaving an
-			// unterminated quoted field.
-			if cfs.rp >= len(cfs.src) {
-				cfs.err = fmt.Errorf("composite text format unterminated quoted field")
-				return false
-			}
 			ch := cfs.src[cfs.rp]
 
 			switch ch {
 			case '"':
 				cfs.rp++
-				if cfs.rp < len(cfs.src) && cfs.src[cfs.rp] == '"' {
+				if cfs.src[cfs.rp] == '"' {
 					cfs.fieldBytes = append(cfs.fieldBytes, '"')
 					cfs.rp++
 				} else {
@@ -427,10 +423,6 @@ func (cfs *CompositeTextScanner) Next() bool {
 				}
 			case '\\':
 				cfs.rp++
-				if cfs.rp >= len(cfs.src) {
-					cfs.err = fmt.Errorf("composite text format unterminated quoted field")
-					return false
-				}
 				cfs.fieldBytes = append(cfs.fieldBytes, cfs.src[cfs.rp])
 				cfs.rp++
 			default:

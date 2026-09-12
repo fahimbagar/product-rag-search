@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -146,21 +147,19 @@ func (LineCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan
 type scanPlanBinaryLineToLineScanner struct{}
 
 func (scanPlanBinaryLineToLineScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(LineScanner)
+	scanner := (dst).(LineScanner)
 
 	if src == nil {
 		return scanner.ScanLine(Line{})
 	}
 
-	r := pgio.NewReader(src)
-
-	a := r.Uint64()
-	b := r.Uint64()
-	c := r.Uint64()
-
-	if err := r.Finish(); err != nil {
-		return fmt.Errorf("line: %w", err)
+	if len(src) != 24 {
+		return fmt.Errorf("invalid length for line: %v", len(src))
 	}
+
+	a := binary.BigEndian.Uint64(src)
+	b := binary.BigEndian.Uint64(src[8:])
+	c := binary.BigEndian.Uint64(src[16:])
 
 	return scanner.ScanLine(Line{
 		A:     math.Float64frombits(a),
@@ -173,7 +172,7 @@ func (scanPlanBinaryLineToLineScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToLineScanner struct{}
 
 func (scanPlanTextAnyToLineScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(LineScanner)
+	scanner := (dst).(LineScanner)
 
 	if src == nil {
 		return scanner.ScanLine(Line{})

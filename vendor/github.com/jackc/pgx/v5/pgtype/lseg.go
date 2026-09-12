@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -144,22 +145,20 @@ func (LsegCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan
 type scanPlanBinaryLsegToLsegScanner struct{}
 
 func (scanPlanBinaryLsegToLsegScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(LsegScanner)
+	scanner := (dst).(LsegScanner)
 
 	if src == nil {
 		return scanner.ScanLseg(Lseg{})
 	}
 
-	r := pgio.NewReader(src)
-
-	x1 := r.Uint64()
-	y1 := r.Uint64()
-	x2 := r.Uint64()
-	y2 := r.Uint64()
-
-	if err := r.Finish(); err != nil {
-		return fmt.Errorf("lseg: %w", err)
+	if len(src) != 32 {
+		return fmt.Errorf("invalid length for lseg: %v", len(src))
 	}
+
+	x1 := binary.BigEndian.Uint64(src)
+	y1 := binary.BigEndian.Uint64(src[8:])
+	x2 := binary.BigEndian.Uint64(src[16:])
+	y2 := binary.BigEndian.Uint64(src[24:])
 
 	return scanner.ScanLseg(Lseg{
 		P: [2]Vec2{
@@ -173,7 +172,7 @@ func (scanPlanBinaryLsegToLsegScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToLsegScanner struct{}
 
 func (scanPlanTextAnyToLsegScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(LsegScanner)
+	scanner := (dst).(LsegScanner)
 
 	if src == nil {
 		return scanner.ScanLseg(Lseg{})

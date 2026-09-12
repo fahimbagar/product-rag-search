@@ -79,7 +79,7 @@ func (dst *Int<%= pg_byte_size %>) Scan(src any) error {
 	}
 
 	if n < math.MinInt<%= pg_bit_size %> {
-		return fmt.Errorf("%d is less than minimum value for Int<%= pg_byte_size %>", n)
+		return fmt.Errorf("%d is greater than maximum value for Int<%= pg_byte_size %>", n)
 	}
 	if n > math.MaxInt<%= pg_bit_size %> {
 		return fmt.Errorf("%d is greater than maximum value for Int<%= pg_byte_size %>", n)
@@ -306,9 +306,8 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToInt<%= dst_bit_size %>) Scan(src []b
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint<%= pg_bit_size %>Exact(src)
-	if err != nil {
-		return fmt.Errorf("int<%= pg_byte_size %>: %w", err)
+	if len(src) != <%= pg_byte_size %> {
+		return fmt.Errorf("invalid length for int<%= pg_byte_size %>: %v", len(src))
 	}
 
 	p, ok := (dst).(*int<%= dst_bit_size %>)
@@ -317,7 +316,7 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToInt<%= dst_bit_size %>) Scan(src []b
 	}
 
   <% if dst_bit_size < pg_bit_size %>
-	n := int<%= pg_bit_size %>(raw)
+	n := int<%= pg_bit_size %>(binary.BigEndian.Uint<%= pg_bit_size %>(src))
 	if n < math.MinInt<%= dst_bit_size %> {
 		return fmt.Errorf("%d is less than minimum value for int<%= dst_bit_size %>", n)
 	} else if n > math.MaxInt<%= dst_bit_size %> {
@@ -326,9 +325,9 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToInt<%= dst_bit_size %>) Scan(src []b
 
 	*p = int<%= dst_bit_size %>(n)
   <% elsif dst_bit_size == pg_bit_size %>
-	*p = int<%= dst_bit_size %>(raw)
+	*p = int<%= dst_bit_size %>(binary.BigEndian.Uint<%= pg_bit_size %>(src))
   <% else %>
-	*p = int<%= dst_bit_size %>(int<%= pg_bit_size %>(raw))
+	*p = int<%= dst_bit_size %>(int<%= pg_bit_size %>(binary.BigEndian.Uint<%= pg_bit_size %>(src)))
   <% end %>
 
 	return nil
@@ -341,9 +340,8 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToUint<%= dst_bit_size %>) Scan(src []
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint<%= pg_bit_size %>Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint<%= pg_byte_size %>: %w", err)
+	if len(src) != <%= pg_byte_size %> {
+		return fmt.Errorf("invalid length for uint<%= pg_byte_size %>: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint<%= dst_bit_size %>)
@@ -351,7 +349,7 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToUint<%= dst_bit_size %>) Scan(src []
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int<%= pg_bit_size %>(raw)
+	n := int<%= pg_bit_size %>(binary.BigEndian.Uint<%= pg_bit_size %>(src))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint<%= dst_bit_size %>", n)
 	}
@@ -374,9 +372,8 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToInt) Scan(src []byte, dst any) error
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint<%= pg_bit_size %>Exact(src)
-	if err != nil {
-		return fmt.Errorf("int<%= pg_byte_size %>: %w", err)
+	if len(src) != <%= pg_byte_size %> {
+		return fmt.Errorf("invalid length for int<%= pg_byte_size %>: %v", len(src))
 	}
 
 	p, ok := (dst).(*int)
@@ -385,7 +382,7 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToInt) Scan(src []byte, dst any) error
 	}
 
   <% if 32 < pg_bit_size %>
-	n := int64(raw)
+	n := int64(binary.BigEndian.Uint<%= pg_bit_size %>(src))
 	if n < math.MinInt {
 		return fmt.Errorf("%d is less than minimum value for int", n)
 	} else if n > math.MaxInt {
@@ -394,7 +391,7 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToInt) Scan(src []byte, dst any) error
 
 	*p = int(n)
   <% else %>
-	*p = int(int<%= pg_bit_size %>(raw))
+	*p = int(int<%= pg_bit_size %>(binary.BigEndian.Uint<%= pg_bit_size %>(src)))
   <% end %>
 
 	return nil
@@ -407,9 +404,8 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToUint) Scan(src []byte, dst any) erro
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint<%= pg_bit_size %>Exact(src)
-	if err != nil {
-		return fmt.Errorf("uint<%= pg_byte_size %>: %w", err)
+	if len(src) != <%= pg_byte_size %> {
+		return fmt.Errorf("invalid length for uint<%= pg_byte_size %>: %v", len(src))
 	}
 
 	p, ok := (dst).(*uint)
@@ -417,7 +413,7 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToUint) Scan(src []byte, dst any) erro
 		return ErrScanTargetTypeChanged
 	}
 
-	n := int64(int<%= pg_bit_size %>(raw))
+	n := int64(int<%= pg_bit_size %>(binary.BigEndian.Uint<%= pg_bit_size %>(src)))
 	if n < 0 {
 		return fmt.Errorf("%d is less than minimum value for uint", n)
 	}
@@ -444,13 +440,12 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToInt64Scanner) Scan(src []byte, dst a
     return s.ScanInt64(Int8{})
 	}
 
-	raw, err := pgio.Uint<%= pg_bit_size %>Exact(src)
-	if err != nil {
-		return fmt.Errorf("int<%= pg_byte_size %>: %w", err)
+	if len(src) != <%= pg_byte_size %> {
+		return fmt.Errorf("invalid length for int<%= pg_byte_size %>: %v", len(src))
 	}
 
 
-	n := int64(int<%= pg_bit_size %>(raw))
+	n := int64(int<%= pg_bit_size %>(binary.BigEndian.Uint<%= pg_bit_size %>(src)))
 
   return s.ScanInt64(Int8{Int64: n, Valid: true})
 }
@@ -468,13 +463,12 @@ func (scanPlanBinaryInt<%= pg_byte_size %>ToTextScanner) Scan(src []byte, dst an
     return s.ScanText(Text{})
 	}
 
-	raw, err := pgio.Uint<%= pg_bit_size %>Exact(src)
-	if err != nil {
-		return fmt.Errorf("int<%= pg_byte_size %>: %w", err)
+	if len(src) != <%= pg_byte_size %> {
+		return fmt.Errorf("invalid length for int<%= pg_byte_size %>: %v", len(src))
 	}
 
 
-	n := int64(int<%= pg_bit_size %>(raw))
+	n := int64(int<%= pg_bit_size %>(binary.BigEndian.Uint<%= pg_bit_size %>(src)))
 
   return s.ScanText(Text{String: strconv.FormatInt(n, 10), Valid: true})
 }

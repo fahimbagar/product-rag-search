@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -245,13 +246,12 @@ func (scanPlanBinaryFloat8ToFloat64) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan NULL into %T", dst)
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("float8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for float8: %v", len(src))
 	}
 
-	n := int64(raw)
-	f := dst.(*float64)
+	n := int64(binary.BigEndian.Uint64(src))
+	f := (dst).(*float64)
 	*f = math.Float64frombits(uint64(n))
 
 	return nil
@@ -260,36 +260,34 @@ func (scanPlanBinaryFloat8ToFloat64) Scan(src []byte, dst any) error {
 type scanPlanBinaryFloat8ToFloat64Scanner struct{}
 
 func (scanPlanBinaryFloat8ToFloat64Scanner) Scan(src []byte, dst any) error {
-	s := dst.(Float64Scanner)
+	s := (dst).(Float64Scanner)
 
 	if src == nil {
 		return s.ScanFloat64(Float8{})
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("float8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for float8: %v", len(src))
 	}
 
-	n := int64(raw)
+	n := int64(binary.BigEndian.Uint64(src))
 	return s.ScanFloat64(Float8{Float64: math.Float64frombits(uint64(n)), Valid: true})
 }
 
 type scanPlanBinaryFloat8ToInt64Scanner struct{}
 
 func (scanPlanBinaryFloat8ToInt64Scanner) Scan(src []byte, dst any) error {
-	s := dst.(Int64Scanner)
+	s := (dst).(Int64Scanner)
 
 	if src == nil {
 		return s.ScanInt64(Int8{})
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("float8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for float8: %v", len(src))
 	}
 
-	ui64 := int64(raw)
+	ui64 := int64(binary.BigEndian.Uint64(src))
 	f64 := math.Float64frombits(uint64(ui64))
 	i64 := int64(f64)
 	if f64 != float64(i64) {
@@ -302,18 +300,17 @@ func (scanPlanBinaryFloat8ToInt64Scanner) Scan(src []byte, dst any) error {
 type scanPlanBinaryFloat8ToTextScanner struct{}
 
 func (scanPlanBinaryFloat8ToTextScanner) Scan(src []byte, dst any) error {
-	s := dst.(TextScanner)
+	s := (dst).(TextScanner)
 
 	if src == nil {
 		return s.ScanText(Text{})
 	}
 
-	raw, err := pgio.Uint64Exact(src)
-	if err != nil {
-		return fmt.Errorf("float8: %w", err)
+	if len(src) != 8 {
+		return fmt.Errorf("invalid length for float8: %v", len(src))
 	}
 
-	ui64 := int64(raw)
+	ui64 := int64(binary.BigEndian.Uint64(src))
 	f64 := math.Float64frombits(uint64(ui64))
 
 	return s.ScanText(Text{String: strconv.FormatFloat(f64, 'f', -1, 64), Valid: true})
@@ -331,7 +328,7 @@ func (scanPlanTextAnyToFloat64) Scan(src []byte, dst any) error {
 		return err
 	}
 
-	f := dst.(*float64)
+	f := (dst).(*float64)
 	*f = n
 
 	return nil
@@ -340,7 +337,7 @@ func (scanPlanTextAnyToFloat64) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToFloat64Scanner struct{}
 
 func (scanPlanTextAnyToFloat64Scanner) Scan(src []byte, dst any) error {
-	s := dst.(Float64Scanner)
+	s := (dst).(Float64Scanner)
 
 	if src == nil {
 		return s.ScanFloat64(Float8{})

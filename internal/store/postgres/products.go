@@ -6,18 +6,24 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pgvector/pgvector-go"
 
 	"github.com/fahimbagar/product-rag-search/internal/store"
 )
 
-// ProductStore implements store.ProductRepository against Postgres.
-type ProductStore struct {
-	pool *pgxpool.Pool
+// pgxIface is the subset of *pgxpool.Pool that ProductStore needs, so tests
+// can substitute a pgxmock pool instead of a real database.
+type pgxIface interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-func NewProductStore(pool *pgxpool.Pool) *ProductStore {
+// ProductStore implements store.ProductRepository against Postgres.
+type ProductStore struct {
+	pool pgxIface
+}
+
+func NewProductStore(pool pgxIface) *ProductStore {
 	return &ProductStore{pool: pool}
 }
 

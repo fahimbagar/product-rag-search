@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -144,22 +145,20 @@ func (BoxCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan 
 type scanPlanBinaryBoxToBoxScanner struct{}
 
 func (scanPlanBinaryBoxToBoxScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(BoxScanner)
+	scanner := (dst).(BoxScanner)
 
 	if src == nil {
 		return scanner.ScanBox(Box{})
 	}
 
-	r := pgio.NewReader(src)
-
-	x1 := r.Uint64()
-	y1 := r.Uint64()
-	x2 := r.Uint64()
-	y2 := r.Uint64()
-
-	if err := r.Finish(); err != nil {
-		return fmt.Errorf("Box: %w", err)
+	if len(src) != 32 {
+		return fmt.Errorf("invalid length for Box: %v", len(src))
 	}
+
+	x1 := binary.BigEndian.Uint64(src)
+	y1 := binary.BigEndian.Uint64(src[8:])
+	x2 := binary.BigEndian.Uint64(src[16:])
+	y2 := binary.BigEndian.Uint64(src[24:])
 
 	return scanner.ScanBox(Box{
 		P: [2]Vec2{
@@ -173,7 +172,7 @@ func (scanPlanBinaryBoxToBoxScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToBoxScanner struct{}
 
 func (scanPlanTextAnyToBoxScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(BoxScanner)
+	scanner := (dst).(BoxScanner)
 
 	if src == nil {
 		return scanner.ScanBox(Box{})

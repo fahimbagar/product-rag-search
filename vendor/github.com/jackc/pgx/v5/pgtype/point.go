@@ -3,6 +3,7 @@ package pgtype
 import (
 	"bytes"
 	"database/sql/driver"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -214,20 +215,18 @@ func (c PointCodec) DecodeValue(m *Map, oid uint32, format int16, src []byte) (a
 type scanPlanBinaryPointToPointScanner struct{}
 
 func (scanPlanBinaryPointToPointScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(PointScanner)
+	scanner := (dst).(PointScanner)
 
 	if src == nil {
 		return scanner.ScanPoint(Point{})
 	}
 
-	r := pgio.NewReader(src)
-
-	x := r.Uint64()
-	y := r.Uint64()
-
-	if err := r.Finish(); err != nil {
-		return fmt.Errorf("point: %w", err)
+	if len(src) != 16 {
+		return fmt.Errorf("invalid length for point: %v", len(src))
 	}
+
+	x := binary.BigEndian.Uint64(src)
+	y := binary.BigEndian.Uint64(src[8:])
 
 	return scanner.ScanPoint(Point{
 		P:     Vec2{math.Float64frombits(x), math.Float64frombits(y)},
@@ -238,7 +237,7 @@ func (scanPlanBinaryPointToPointScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToPointScanner struct{}
 
 func (scanPlanTextAnyToPointScanner) Scan(src []byte, dst any) error {
-	scanner := dst.(PointScanner)
+	scanner := (dst).(PointScanner)
 
 	if src == nil {
 		return scanner.ScanPoint(Point{})
