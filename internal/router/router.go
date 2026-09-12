@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -14,12 +15,13 @@ import (
 
 // New builds the HTTP handler for the service.
 func New(logger *slog.Logger, db *pgxpool.Pool, p *pipeline.Pipeline, ingester *ingestion.Ingester, adminToken string) http.Handler {
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
+	r.Use(withMiddleware(logger))
 
-	mux.HandleFunc("GET /health", handleHealth(db))
-	mux.HandleFunc("POST /query", handleQuery(logger, p))
-	mux.HandleFunc("POST /ingest", handleIngest(logger, ingester, adminToken))
-	mux.Handle("GET /metrics", promhttp.Handler())
+	r.Get("/health", handleHealth(db))
+	r.Post("/query", handleQuery(logger, p))
+	r.Post("/ingest", handleIngest(logger, ingester, adminToken))
+	r.Handle("/metrics", promhttp.Handler())
 
-	return withMiddleware(logger, mux)
+	return r
 }
