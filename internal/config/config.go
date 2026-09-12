@@ -3,8 +3,10 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config holds the service's environment-derived settings: database and
@@ -19,7 +21,7 @@ type Config struct {
 	GeminiEmbeddingDimension int
 
 	HTTPAddr string
-	LogLevel string
+	LogLevel slog.Level
 
 	RRFK          int
 	RetrievalTopK int
@@ -37,12 +39,14 @@ func Load() (Config, error) {
 		GeminiEmbeddingModel: getEnvDefault("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"),
 
 		HTTPAddr: getEnvDefault("HTTP_ADDR", ":8080"),
-		LogLevel: getEnvDefault("LOG_LEVEL", "info"),
 
 		AdminToken: os.Getenv("ADMIN_TOKEN"),
 	}
 
 	var err error
+	if cfg.LogLevel, err = parseLogLevel(getEnvDefault("LOG_LEVEL", "info")); err != nil {
+		return Config{}, err
+	}
 	if cfg.RRFK, err = getEnvIntDefault("RRF_K", 60); err != nil {
 		return Config{}, err
 	}
@@ -68,6 +72,21 @@ func getEnvDefault(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func parseLogLevel(v string) (slog.Level, error) {
+	switch strings.ToLower(v) {
+	case "debug":
+		return slog.LevelDebug, nil
+	case "info":
+		return slog.LevelInfo, nil
+	case "warn", "warning":
+		return slog.LevelWarn, nil
+	case "error":
+		return slog.LevelError, nil
+	default:
+		return 0, fmt.Errorf("config: invalid LOG_LEVEL %q (want debug, info, warn, or error)", v)
+	}
 }
 
 func getEnvIntDefault(key string, def int) (int, error) {

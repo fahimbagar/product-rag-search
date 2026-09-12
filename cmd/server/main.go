@@ -25,20 +25,21 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	cfg, err := config.Load()
+	if err != nil {
+		slog.New(slog.NewJSONHandler(os.Stdout, nil)).Error("server exited with error", "error", err)
+		os.Exit(1)
+	}
 
-	if err := run(logger); err != nil {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
+
+	if err := run(logger, cfg); err != nil {
 		logger.Error("server exited with error", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run(logger *slog.Logger) error {
-	cfg, err := config.Load()
-	if err != nil {
-		return err
-	}
-
+func run(logger *slog.Logger, cfg config.Config) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
