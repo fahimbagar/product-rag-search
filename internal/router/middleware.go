@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/fahimbagar/product-rag-search/internal/metrics"
+	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
 )
 
 type statusRecorder struct {
@@ -25,17 +26,19 @@ func withMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := uuid.NewString()
+			reqLogger := logger.With("request_id", requestID)
+			r = r.WithContext(ctxlog.WithLogger(r.Context(), reqLogger))
+
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 
 			start := time.Now()
 			defer func() {
 				if rr := recover(); rr != nil {
-					logger.Error("panic recovered", "request_id", requestID, "panic", rr)
+					reqLogger.Error("panic recovered", "panic", rr)
 					http.Error(rec, "internal server error", http.StatusInternalServerError)
 				}
 				duration := time.Since(start)
-				logger.Info("request",
-					"request_id", requestID,
+				reqLogger.Info("request",
 					"method", r.Method,
 					"path", r.URL.Path,
 					"status", rec.status,

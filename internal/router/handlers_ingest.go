@@ -2,10 +2,10 @@ package router
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 
 	"github.com/fahimbagar/product-rag-search/internal/ingestion"
+	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
 )
 
 type ingestProduct struct {
@@ -28,7 +28,7 @@ type ingestRequest struct {
 	Relations []ingestRelation `json:"relations"`
 }
 
-func handleIngest(logger *slog.Logger, ingester *ingestion.Ingester, adminToken string) http.HandlerFunc {
+func handleIngest(ingester *ingestion.Ingester, adminToken string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if adminToken == "" || r.Header.Get("Authorization") != "Bearer "+adminToken {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -62,7 +62,7 @@ func handleIngest(logger *slog.Logger, ingester *ingestion.Ingester, adminToken 
 		}
 
 		if err := ingester.Ingest(r.Context(), raw, related); err != nil {
-			logger.Error("ingest failed", "error", err)
+			ctxlog.FromContext(r.Context()).Error("ingest failed", "error", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}

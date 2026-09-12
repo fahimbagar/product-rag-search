@@ -19,8 +19,8 @@ func New(logger *slog.Logger, hc *healthcheck.HealthCheck, p *pipeline.Pipeline,
 	r.Use(withMiddleware(logger))
 
 	r.Get("/health", hc.Handler())
-	r.Post("/query", handleQuery(logger, p))
-	r.Post("/ingest", handleIngest(logger, ingester, adminToken))
+	r.Post("/query", handleQuery(p))
+	r.Post("/ingest", handleIngest(ingester, adminToken))
 	r.Handle("/metrics", promhttp.Handler())
 
 	return r
