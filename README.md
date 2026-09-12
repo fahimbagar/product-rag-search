@@ -19,7 +19,7 @@ and grounded, cited answer generation.
 
 | Concern | Choice | Why |
 |---|---|---|
-| Language / API | Go, `net/http` (stdlib mux) | Single deployable binary, no framework needed at this size |
+| Language / API | Go, `go-chi` | Single deployable binary, thin routing on top of `net/http` |
 | Vector store | Postgres + pgvector | Cosine similarity search on the `products.embedding` column |
 | Graph store | Postgres + Apache AGE | Cypher traversal on `product_graph`, same database as pgvector (one instance to operate, not two) |
 | Keyword search | Postgres full-text (`tsvector`/`ts_rank`) | Third retrieval signal, no extra service |
@@ -30,6 +30,7 @@ and grounded, cited answer generation.
 | Orchestration | Docker Compose | `postgres` → `migrate` → `app`, `seed` on demand |
 | Migrations | `golang-migrate` | Plain SQL files, reviewable, no ORM |
 | Metrics | Prometheus (`client_golang`) + Grafana | Go-native metrics client, `GET /metrics`, pre-provisioned dashboard |
+| Logging | `zap`, JSON to stdout | Structured, request-scoped logger carried on `context.Context` (`pkg/ctxlog`), not threaded through every function signature |
 
 ## Architecture
 
@@ -85,7 +86,11 @@ edges) → wire up any curated `RELATED_TO` edges between products.
   and the Postgres implementation (pgxpool, AGE session setup)
 - `internal/ingestion`: embed, insert, then wire graph edges
 - `internal/pipeline`: the query flow above, wired from interfaces so every stage is swappable
-- `internal/router`: HTTP handlers (`/health`, `/query`, `/ingest`) and middleware
+- `internal/router`: HTTP handlers (`/query`, `/ingest`) and middleware, built on `go-chi`
+- `internal/app`: loads config and wires every dependency above into concrete types,
+  shared by `cmd/server` and `cmd/seed`
+- `pkg/healthcheck`: `/health` handler backed by a `Pinger` (DB pool), decoupled from `internal/router`
+- `pkg/ctxlog`: carries the request-scoped `*zap.SugaredLogger` on `context.Context`
 - `cmd/{server,migrate,seed}`: entrypoints
 
 Every cross-cutting seam (embeddings, intent classification, generation, each retrieval
