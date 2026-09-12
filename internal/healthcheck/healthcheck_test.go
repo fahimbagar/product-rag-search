@@ -21,6 +21,8 @@ func (m *mockPinger) Ping(ctx context.Context) error {
 }
 
 func TestHandler(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		pingErr    error
