@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -88,7 +89,7 @@ func run(logger *slog.Logger, cfg config.Config) error {
 	errCh := make(chan error, 1)
 	go func() {
 		logger.Info("server listening", "addr", cfg.HTTPAddr)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
 	}()
