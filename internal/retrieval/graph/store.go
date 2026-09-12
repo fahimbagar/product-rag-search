@@ -14,7 +14,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fahimbagar/product-rag-search/internal/retrieval"
 )
@@ -41,13 +42,20 @@ type ProductNode struct {
 	Attributes map[string]string
 }
 
+// pgxIface is the subset of *pgxpool.Pool that Store needs, so tests can
+// substitute a pgxmock pool instead of a real database.
+type pgxIface interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
+
 // Store implements retrieval.Source (graph-proximity search) and Writer
 // (graph-ingestion) against the Apache AGE "product_graph".
 type Store struct {
-	pool *pgxpool.Pool
+	pool pgxIface
 }
 
-func NewStore(pool *pgxpool.Pool) *Store {
+func NewStore(pool pgxIface) *Store {
 	return &Store{pool: pool}
 }
 
