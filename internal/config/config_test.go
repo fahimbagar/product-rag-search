@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func TestParseLogLevel(t *testing.T) {
+func Test_parseLogLevel(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -29,8 +29,6 @@ func TestParseLogLevel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			got, err := parseLogLevel(tt.in)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -42,136 +40,122 @@ func TestParseLogLevel(t *testing.T) {
 	}
 }
 
-func TestGetEnvDefault(t *testing.T) {
-	t.Run("returns env value when set", func(t *testing.T) {
-		t.Setenv("CONFIG_TEST_KEY", "custom")
-		assert.Equal(t, "custom", getEnvDefault("CONFIG_TEST_KEY", "fallback"))
-	})
-
-	t.Run("returns default when unset", func(t *testing.T) {
-		t.Setenv("CONFIG_TEST_KEY", "")
-		assert.Equal(t, "fallback", getEnvDefault("CONFIG_TEST_KEY", "fallback"))
-	})
-}
-
-func TestGetEnvIntDefault(t *testing.T) {
-	t.Run("returns default when unset", func(t *testing.T) {
-		t.Setenv("CONFIG_TEST_INT", "")
-		got, err := getEnvIntDefault("CONFIG_TEST_INT", 42)
-		require.NoError(t, err)
-		assert.Equal(t, 42, got)
-	})
-
-	t.Run("parses a valid int", func(t *testing.T) {
-		t.Setenv("CONFIG_TEST_INT", "7")
-		got, err := getEnvIntDefault("CONFIG_TEST_INT", 42)
-		require.NoError(t, err)
-		assert.Equal(t, 7, got)
-	})
-
-	t.Run("errors on a non-numeric value", func(t *testing.T) {
-		t.Setenv("CONFIG_TEST_INT", "not-a-number")
-		_, err := getEnvIntDefault("CONFIG_TEST_INT", 42)
-		assert.Error(t, err)
-	})
-}
-
-// setBaseEnv sets every env var Load reads to an explicit value, so the test
-// is deterministic regardless of what's in the surrounding environment.
-func setBaseEnv(t *testing.T) {
+// baseEnv sets every env var Load reads to an explicit value, so each test
+// case is deterministic regardless of what's in the surrounding
+// environment. overrides are applied on top before Load runs.
+func setEnv(t *testing.T, overrides map[string]string) {
 	t.Helper()
-	t.Setenv("DATABASE_URL", "postgres://localhost/test")
-	t.Setenv("GEMINI_API_KEY", "")
-	t.Setenv("GEMINI_INTENT_MODEL", "")
-	t.Setenv("GEMINI_ANSWER_MODEL", "")
-	t.Setenv("GEMINI_EMBEDDING_MODEL", "")
-	t.Setenv("HTTP_ADDR", "")
-	t.Setenv("LOG_LEVEL", "")
-	t.Setenv("RRF_K", "")
-	t.Setenv("RETRIEVAL_TOP_K", "")
-	t.Setenv("FINAL_TOP_N", "")
-	t.Setenv("ADMIN_TOKEN", "")
+
+	base := map[string]string{
+		"DATABASE_URL":           "postgres://localhost/test",
+		"GEMINI_API_KEY":         "",
+		"GEMINI_INTENT_MODEL":    "",
+		"GEMINI_ANSWER_MODEL":    "",
+		"GEMINI_EMBEDDING_MODEL": "",
+		"HTTP_ADDR":              "",
+		"LOG_LEVEL":              "",
+		"RRF_K":                  "",
+		"RETRIEVAL_TOP_K":        "",
+		"FINAL_TOP_N":            "",
+		"ADMIN_TOKEN":            "",
+	}
+	for k, v := range overrides {
+		base[k] = v
+	}
+	for k, v := range base {
+		t.Setenv(k, v)
+	}
 }
 
-func TestLoad_Defaults(t *testing.T) {
-	setBaseEnv(t)
-
-	cfg, err := Load()
-	require.NoError(t, err)
-
-	assert.Equal(t, "postgres://localhost/test", cfg.DatabaseURL)
-	assert.Equal(t, "gemini-3.5-flash-lite", cfg.GeminiIntentModel)
-	assert.Equal(t, "gemini-3.8-flash", cfg.GeminiAnswerModel)
-	assert.Equal(t, "gemini-embedding-001", cfg.GeminiEmbeddingModel)
-	assert.Equal(t, ":8080", cfg.HTTPAddr)
-	assert.Equal(t, zapcore.InfoLevel, cfg.LogLevel)
-	assert.Equal(t, 60, cfg.RRFK)
-	assert.Equal(t, 10, cfg.RetrievalTopK)
-	assert.Equal(t, 5, cfg.FinalTopN)
-	assert.Empty(t, cfg.AdminToken)
-}
-
-func TestLoad_Overrides(t *testing.T) {
-	setBaseEnv(t)
-	t.Setenv("GEMINI_API_KEY", "test-key")
-	t.Setenv("GEMINI_INTENT_MODEL", "custom-intent")
-	t.Setenv("GEMINI_ANSWER_MODEL", "custom-answer")
-	t.Setenv("GEMINI_EMBEDDING_MODEL", "custom-embedding")
-	t.Setenv("HTTP_ADDR", ":9090")
-	t.Setenv("LOG_LEVEL", "debug")
-	t.Setenv("RRF_K", "30")
-	t.Setenv("RETRIEVAL_TOP_K", "20")
-	t.Setenv("FINAL_TOP_N", "3")
-	t.Setenv("ADMIN_TOKEN", "secret")
-
-	cfg, err := Load()
-	require.NoError(t, err)
-
-	assert.Equal(t, "test-key", cfg.GeminiAPIKey)
-	assert.Equal(t, "custom-intent", cfg.GeminiIntentModel)
-	assert.Equal(t, "custom-answer", cfg.GeminiAnswerModel)
-	assert.Equal(t, "custom-embedding", cfg.GeminiEmbeddingModel)
-	assert.Equal(t, ":9090", cfg.HTTPAddr)
-	assert.Equal(t, zapcore.DebugLevel, cfg.LogLevel)
-	assert.Equal(t, 30, cfg.RRFK)
-	assert.Equal(t, 20, cfg.RetrievalTopK)
-	assert.Equal(t, 3, cfg.FinalTopN)
-	assert.Equal(t, "secret", cfg.AdminToken)
-}
-
-func TestLoad_MissingDatabaseURL(t *testing.T) {
-	setBaseEnv(t)
-	t.Setenv("DATABASE_URL", "")
-
-	_, err := Load()
-	assert.ErrorContains(t, err, "DATABASE_URL is required")
-}
-
-func TestLoad_InvalidLogLevel(t *testing.T) {
-	setBaseEnv(t)
-	t.Setenv("LOG_LEVEL", "verbose")
-
-	_, err := Load()
-	assert.ErrorContains(t, err, "invalid LOG_LEVEL")
-}
-
-func TestLoad_InvalidInts(t *testing.T) {
+func TestLoad(t *testing.T) {
 	tests := []struct {
-		name   string
-		envKey string
+		name    string
+		env     map[string]string
+		wantErr string
+		wantCfg Config
 	}{
-		{name: "RRF_K", envKey: "RRF_K"},
-		{name: "RETRIEVAL_TOP_K", envKey: "RETRIEVAL_TOP_K"},
-		{name: "FINAL_TOP_N", envKey: "FINAL_TOP_N"},
+		{
+			name: "defaults",
+			env:  nil,
+			wantCfg: Config{
+				DatabaseURL:          "postgres://localhost/test",
+				GeminiIntentModel:    "gemini-3.5-flash-lite",
+				GeminiAnswerModel:    "gemini-3.8-flash",
+				GeminiEmbeddingModel: "gemini-embedding-001",
+				HTTPAddr:             ":8080",
+				LogLevel:             zapcore.InfoLevel,
+				RRFK:                 60,
+				RetrievalTopK:        10,
+				FinalTopN:            5,
+			},
+		},
+		{
+			name: "overrides",
+			env: map[string]string{
+				"GEMINI_API_KEY":         "test-key",
+				"GEMINI_INTENT_MODEL":    "custom-intent",
+				"GEMINI_ANSWER_MODEL":    "custom-answer",
+				"GEMINI_EMBEDDING_MODEL": "custom-embedding",
+				"HTTP_ADDR":              ":9090",
+				"LOG_LEVEL":              "debug",
+				"RRF_K":                  "30",
+				"RETRIEVAL_TOP_K":        "20",
+				"FINAL_TOP_N":            "3",
+				"ADMIN_TOKEN":            "secret",
+			},
+			wantCfg: Config{
+				DatabaseURL:          "postgres://localhost/test",
+				GeminiAPIKey:         "test-key",
+				GeminiIntentModel:    "custom-intent",
+				GeminiAnswerModel:    "custom-answer",
+				GeminiEmbeddingModel: "custom-embedding",
+				HTTPAddr:             ":9090",
+				LogLevel:             zapcore.DebugLevel,
+				RRFK:                 30,
+				RetrievalTopK:        20,
+				FinalTopN:            3,
+				AdminToken:           "secret",
+			},
+		},
+		{
+			name:    "missing database url",
+			env:     map[string]string{"DATABASE_URL": ""},
+			wantErr: "DATABASE_URL is required",
+		},
+		{
+			name:    "invalid log level",
+			env:     map[string]string{"LOG_LEVEL": "verbose"},
+			wantErr: "invalid LOG_LEVEL",
+		},
+		{
+			name:    "invalid RRF_K",
+			env:     map[string]string{"RRF_K": "not-a-number"},
+			wantErr: "invalid int for RRF_K",
+		},
+		{
+			name:    "invalid RETRIEVAL_TOP_K",
+			env:     map[string]string{"RETRIEVAL_TOP_K": "not-a-number"},
+			wantErr: "invalid int for RETRIEVAL_TOP_K",
+		},
+		{
+			name:    "invalid FINAL_TOP_N",
+			env:     map[string]string{"FINAL_TOP_N": "not-a-number"},
+			wantErr: "invalid int for FINAL_TOP_N",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			setBaseEnv(t)
-			t.Setenv(tt.envKey, "not-a-number")
+			setEnv(t, tt.env)
 
-			_, err := Load()
-			assert.ErrorContains(t, err, "invalid int for "+tt.envKey)
+			cfg, err := Load()
+
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantCfg, cfg)
 		})
 	}
 }
