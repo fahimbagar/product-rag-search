@@ -41,6 +41,7 @@ services:
       GEMINI_ANSWER_MODEL: ${GEMINI_ANSWER_MODEL:-gemini-3.8-flash}
       GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
       HTTP_ADDR: ":8080"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
       RRF_K: ${RRF_K:-60}
       RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K:-10}
       FINAL_TOP_N: ${FINAL_TOP_N:-5}
@@ -66,6 +67,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-product_rag}?sslmode=disable
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       migrate:
         condition: service_completed_successfully

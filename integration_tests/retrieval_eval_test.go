@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 
 	"github.com/fahimbagar/product-rag-search/internal/config"
 	"github.com/fahimbagar/product-rag-search/internal/embeddings/gemini"
@@ -55,7 +56,7 @@ func TestRetrievalGoldenSet(t *testing.T) {
 	cfg := requireConfig(t)
 	ctx := context.Background()
 
-	db, err := postgres.NewPool(ctx, cfg.DatabaseURL)
+	db, err := postgres.NewPool(ctx, cfg.DatabaseURL, zap.NewNop().Sugar())
 	if err != nil {
 		t.Fatalf("connect postgres: %v", err)
 	}

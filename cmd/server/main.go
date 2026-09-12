@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	"github.com/fahimbagar/product-rag-search/internal/app"
 	"github.com/fahimbagar/product-rag-search/internal/router"
@@ -23,34 +22,16 @@ func main() {
 
 	deps, err := app.Load(ctx)
 	if err != nil {
-		bootstrap, _ := newLogger(zapcore.InfoLevel)
-		bootstrap.Errorw("server exited with error", "error", err)
+		bootstrap, _ := zap.NewProduction()
+		bootstrap.Sugar().Errorw("server exited with error", "error", err)
 		os.Exit(1)
 	}
 	defer deps.Close()
 
-	logger, err := newLogger(deps.Config.LogLevel)
-	if err != nil {
+	if err := run(ctx, deps.Logger, deps); err != nil {
+		deps.Logger.Errorw("server exited with error", "error", err)
 		os.Exit(1)
 	}
-	defer logger.Sync()
-
-	if err := run(ctx, logger, deps); err != nil {
-		logger.Errorw("server exited with error", "error", err)
-		os.Exit(1)
-	}
-}
-
-func newLogger(level zapcore.Level) (*zap.SugaredLogger, error) {
-	cfg := zap.NewProductionConfig()
-	cfg.OutputPaths = []string{"stdout"}
-	cfg.Level = zap.NewAtomicLevelAt(level)
-
-	logger, err := cfg.Build()
-	if err != nil {
-		return nil, err
-	}
-	return logger.Sugar(), nil
 }
 
 func run(ctx context.Context, logger *zap.SugaredLogger, deps *app.Dependencies) error {

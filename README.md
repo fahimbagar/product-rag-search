@@ -30,7 +30,7 @@ and grounded, cited answer generation.
 | Orchestration | Docker Compose | `postgres` → `migrate` → `app`, `seed` on demand |
 | Migrations | `golang-migrate` | Plain SQL files, reviewable, no ORM |
 | Metrics | Prometheus (`client_golang`) + Grafana | Go-native metrics client, `GET /metrics`, pre-provisioned dashboard |
-| Logging | `zap`, JSON to stdout | Structured, request-scoped logger carried on `context.Context` (`internal/ctxlog`), not threaded through every function signature |
+| Logging | `zap`, JSON to stdout | Structured, request-scoped logger carried on `context.Context` (`internal/ctxlog`), not threaded through every function signature. Pipeline/ingestion steps and every pgx query (SQL, args, duration) log at debug, so `LOG_LEVEL=debug` traces both without touching normal output |
 
 ## Architecture
 

@@ -8,15 +8,23 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/tracelog"
+	"go.uber.org/zap"
 )
 
 // NewPool opens a pgx pool and arranges for every physical connection to load
 // the AGE extension and set its search_path, since both are session-scoped
-// and are not persisted at the database level.
-func NewPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+// and are not persisted at the database level. Query tracing (SQL, args,
+// duration) is routed through logger, at debug level.
+func NewPool(ctx context.Context, databaseURL string, logger *zap.SugaredLogger) (*pgxpool.Pool, error) {
 	poolCfg, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse database url: %w", err)
+	}
+
+	poolCfg.ConnConfig.Tracer = &tracelog.TraceLog{
+		Logger:   zapTraceLogger{logger: logger},
+		LogLevel: tracelog.LogLevelInfo,
 	}
 
 	poolCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
