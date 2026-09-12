@@ -148,6 +148,16 @@ same shape as `seed/products.json`:
 }
 ```
 
+`relations` curates explicit `RELATED_TO` graph edges between two products
+in the same request (e.g. a shoe and a matching sock). `from_index` and
+`to_index` are positions into that request's own `products` array, not
+persistent product IDs: `internal/ingestion` resolves them to the newly
+inserted product UUIDs before writing the edge, so a pair only makes sense
+within the request that declared both products. `weight` is stored on the
+edge (`Store.LinkRelated`, an idempotent Cypher `MERGE`) and feeds directly
+into graph proximity scoring, per [Graph proximity scoring](#architecture),
+instead of being counted as a hop.
+
 ## Monitoring & evaluation
 
 **Runtime metrics** (`GET /metrics`, Prometheus format, unauthenticated like `/health`):
