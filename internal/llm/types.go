@@ -25,7 +25,8 @@ type Answer struct {
 
 // Generator produces grounded answers from retrieved product documents, and
 // short deflections for out-of-scope queries. Implementations are
-// swappable (Claude today, any citation-capable LLM tomorrow).
+// swappable (Gemini today; a citation-verifying provider like Claude is a
+// candidate upgrade, see docs/PROVIDERS.md).
 type Generator interface {
 	GenerateAnswer(ctx context.Context, query string, docs []ProductDoc) (Answer, error)
 	Deflect(ctx context.Context, query string) (string, error)
