@@ -4,9 +4,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 )
+
+// errorContains builds an assert.ErrorAssertionFunc that checks err's
+// message contains substr.
+func errorContains(substr string) assert.ErrorAssertionFunc {
+	return func(t assert.TestingT, err error, args ...interface{}) bool {
+		return assert.ErrorContains(t, err, substr, args...)
+	}
+}
 
 func Test_parseLogLevel(t *testing.T) {
 	t.Parallel()
@@ -15,32 +22,31 @@ func Test_parseLogLevel(t *testing.T) {
 		name    string
 		in      string
 		want    zapcore.Level
-		wantErr bool
+		wantErr assert.ErrorAssertionFunc
 	}{
-		{name: "debug", in: "debug", want: zapcore.DebugLevel},
-		{name: "info", in: "info", want: zapcore.InfoLevel},
-		{name: "warn", in: "warn", want: zapcore.WarnLevel},
-		{name: "warning", in: "warning", want: zapcore.WarnLevel},
-		{name: "error", in: "error", want: zapcore.ErrorLevel},
-		{name: "uppercase is normalized", in: "DEBUG", want: zapcore.DebugLevel},
-		{name: "invalid", in: "verbose", wantErr: true},
-		{name: "empty", in: "", wantErr: true},
+		{name: "debug", in: "debug", want: zapcore.DebugLevel, wantErr: assert.NoError},
+		{name: "info", in: "info", want: zapcore.InfoLevel, wantErr: assert.NoError},
+		{name: "warn", in: "warn", want: zapcore.WarnLevel, wantErr: assert.NoError},
+		{name: "warning", in: "warning", want: zapcore.WarnLevel, wantErr: assert.NoError},
+		{name: "error", in: "error", want: zapcore.ErrorLevel, wantErr: assert.NoError},
+		{name: "uppercase is normalized", in: "DEBUG", want: zapcore.DebugLevel, wantErr: assert.NoError},
+		{name: "invalid", in: "verbose", wantErr: assert.Error},
+		{name: "empty", in: "", wantErr: assert.Error},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parseLogLevel(tt.in)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
+
+			tt.wantErr(t, err)
+			if err == nil {
+				assert.Equal(t, tt.want, got)
 			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-// baseEnv sets every env var Load reads to an explicit value, so each test
+// setEnv sets every env var Load reads to an explicit value, so each test
 // case is deterministic regardless of what's in the surrounding
 // environment. overrides are applied on top before Load runs.
 func setEnv(t *testing.T, overrides map[string]string) {
@@ -71,12 +77,13 @@ func TestLoad(t *testing.T) {
 	tests := []struct {
 		name    string
 		env     map[string]string
-		wantErr string
+		wantErr assert.ErrorAssertionFunc
 		wantCfg Config
 	}{
 		{
-			name: "defaults",
-			env:  nil,
+			name:    "defaults",
+			env:     nil,
+			wantErr: assert.NoError,
 			wantCfg: Config{
 				DatabaseURL:          "postgres://localhost/test",
 				GeminiIntentModel:    "gemini-3.5-flash-lite",
@@ -103,6 +110,7 @@ func TestLoad(t *testing.T) {
 				"FINAL_TOP_N":            "3",
 				"ADMIN_TOKEN":            "secret",
 			},
+			wantErr: assert.NoError,
 			wantCfg: Config{
 				DatabaseURL:          "postgres://localhost/test",
 				GeminiAPIKey:         "test-key",
@@ -120,27 +128,27 @@ func TestLoad(t *testing.T) {
 		{
 			name:    "missing database url",
 			env:     map[string]string{"DATABASE_URL": ""},
-			wantErr: "DATABASE_URL is required",
+			wantErr: errorContains("DATABASE_URL is required"),
 		},
 		{
 			name:    "invalid log level",
 			env:     map[string]string{"LOG_LEVEL": "verbose"},
-			wantErr: "invalid LOG_LEVEL",
+			wantErr: errorContains("invalid LOG_LEVEL"),
 		},
 		{
 			name:    "invalid RRF_K",
 			env:     map[string]string{"RRF_K": "not-a-number"},
-			wantErr: "invalid int for RRF_K",
+			wantErr: errorContains("invalid int for RRF_K"),
 		},
 		{
 			name:    "invalid RETRIEVAL_TOP_K",
 			env:     map[string]string{"RETRIEVAL_TOP_K": "not-a-number"},
-			wantErr: "invalid int for RETRIEVAL_TOP_K",
+			wantErr: errorContains("invalid int for RETRIEVAL_TOP_K"),
 		},
 		{
 			name:    "invalid FINAL_TOP_N",
 			env:     map[string]string{"FINAL_TOP_N": "not-a-number"},
-			wantErr: "invalid int for FINAL_TOP_N",
+			wantErr: errorContains("invalid int for FINAL_TOP_N"),
 		},
 	}
 
@@ -150,12 +158,10 @@ func TestLoad(t *testing.T) {
 
 			cfg, err := Load()
 
-			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
-				return
+			tt.wantErr(t, err)
+			if err == nil {
+				assert.Equal(t, tt.wantCfg, cfg)
 			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantCfg, cfg)
 		})
 	}
 }
