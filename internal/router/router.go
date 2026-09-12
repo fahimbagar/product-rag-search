@@ -2,6 +2,7 @@
 package router
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -13,15 +14,29 @@ import (
 	"github.com/fahimbagar/product-rag-search/internal/pipeline"
 )
 
+// querier is the query-serving seam handler.query() depends on. Satisfied
+// by *pipeline.Pipeline; a local interface so tests can fake it without
+// building a real Pipeline.
+type querier interface {
+	Query(ctx context.Context, query string) (pipeline.Result, error)
+}
+
+// productIngester is the ingest-serving seam handler.ingest() depends on.
+// Satisfied by *ingestion.Ingester; a local interface for the same reason
+// as querier.
+type productIngester interface {
+	Ingest(ctx context.Context, raw []ingestion.RawProduct, related []ingestion.RelatedPair) error
+}
+
 // handler holds the dependencies shared by the query and ingest routes.
 type handler struct {
-	pipeline   *pipeline.Pipeline
-	ingester   *ingestion.Ingester
+	pipeline   querier
+	ingester   productIngester
 	adminToken string
 }
 
 // New builds the HTTP handler for the service.
-func New(logger *zap.SugaredLogger, hc *healthcheck.HealthCheck, p *pipeline.Pipeline, ingester *ingestion.Ingester, adminToken string) http.Handler {
+func New(logger *zap.SugaredLogger, hc *healthcheck.HealthCheck, p querier, ingester productIngester, adminToken string) http.Handler {
 	h := handler{
 		pipeline:   p,
 		ingester:   ingester,
