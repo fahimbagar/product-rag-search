@@ -11,11 +11,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/fahimbagar/product-rag-search/internal/config"
-	"github.com/fahimbagar/product-rag-search/internal/embeddings/gemini"
+	"github.com/fahimbagar/product-rag-search/internal/app"
 	"github.com/fahimbagar/product-rag-search/internal/ingestion"
-	"github.com/fahimbagar/product-rag-search/internal/retrieval/graph"
-	"github.com/fahimbagar/product-rag-search/internal/store/postgres"
 )
 
 type seedProduct struct {
@@ -50,11 +47,6 @@ func run(logger *slog.Logger) error {
 	file := flag.String("file", "seed/products.json", "path to seed JSON file")
 	flag.Parse()
 
-	cfg, err := config.Load()
-	if err != nil {
-		return err
-	}
-
 	data, err := os.ReadFile(*file)
 	if err != nil {
 		return fmt.Errorf("read seed file: %w", err)
@@ -65,19 +57,11 @@ func run(logger *slog.Logger) error {
 	}
 
 	ctx := context.Background()
-	db, err := postgres.NewPool(ctx, cfg.DatabaseURL)
+	deps, err := app.Load(ctx)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-
-	embedder, err := gemini.NewClient(ctx, cfg.GeminiAPIKey, cfg.GeminiEmbeddingModel)
-	if err != nil {
-		return err
-	}
-	products := postgres.NewProductStore(db)
-	graphStore := graph.NewStore(db)
-	ingester := ingestion.NewIngester(embedder, products, graphStore)
+	defer deps.Close()
 
 	raw := make([]ingestion.RawProduct, len(sf.Products))
 	for i, p := range sf.Products {
@@ -95,7 +79,7 @@ func run(logger *slog.Logger) error {
 		related[i] = ingestion.RelatedPair{FromIndex: r.FromIndex, ToIndex: r.ToIndex, Weight: r.Weight}
 	}
 
-	if err := ingester.Ingest(ctx, raw, related); err != nil {
+	if err := deps.Ingester.Ingest(ctx, raw, related); err != nil {
 		return fmt.Errorf("ingest: %w", err)
 	}
 
