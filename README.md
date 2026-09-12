@@ -30,7 +30,7 @@ and grounded, cited answer generation.
 | Orchestration | Docker Compose | `postgres` → `migrate` → `app`, `seed` on demand |
 | Migrations | `golang-migrate` | Plain SQL files, reviewable, no ORM |
 | Metrics | Prometheus (`client_golang`) + Grafana | Go-native metrics client, `GET /metrics`, pre-provisioned dashboard |
-| Logging | `zap`, JSON to stdout | Structured, request-scoped logger carried on `context.Context` (`pkg/ctxlog`), not threaded through every function signature |
+| Logging | `zap`, JSON to stdout | Structured, request-scoped logger carried on `context.Context` (`internal/ctxlog`), not threaded through every function signature |
 
 ## Architecture
 
@@ -89,8 +89,8 @@ edges) → wire up any curated `RELATED_TO` edges between products.
 - `internal/router`: HTTP handlers (`/query`, `/ingest`) and middleware, built on `go-chi`
 - `internal/app`: loads config and wires every dependency above into concrete types,
   shared by `cmd/server` and `cmd/seed`
-- `pkg/healthcheck`: `/health` handler backed by a `Pinger` (DB pool), decoupled from `internal/router`
-- `pkg/ctxlog`: carries the request-scoped `*zap.SugaredLogger` on `context.Context`
+- `internal/healthcheck`: `/health` handler backed by a `Pinger` (DB pool), decoupled from `internal/router`
+- `internal/ctxlog`: carries the request-scoped `*zap.SugaredLogger` on `context.Context`
 - `cmd/{server,migrate,seed}`: entrypoints
 
 Every cross-cutting seam (embeddings, intent classification, generation, each retrieval

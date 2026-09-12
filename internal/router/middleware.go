@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/fahimbagar/product-rag-search/internal/ctxlog"
 	"github.com/fahimbagar/product-rag-search/internal/metrics"
-	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
 )
 
 type statusRecorder struct {

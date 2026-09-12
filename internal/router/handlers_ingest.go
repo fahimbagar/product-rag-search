@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/fahimbagar/product-rag-search/internal/ctxlog"
 	"github.com/fahimbagar/product-rag-search/internal/ingestion"
-	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
 )
 
 type ingestProduct struct {

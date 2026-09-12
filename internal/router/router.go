@@ -8,9 +8,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
+	"github.com/fahimbagar/product-rag-search/internal/healthcheck"
 	"github.com/fahimbagar/product-rag-search/internal/ingestion"
 	"github.com/fahimbagar/product-rag-search/internal/pipeline"
-	"github.com/fahimbagar/product-rag-search/pkg/healthcheck"
 )
 
 // handler holds the dependencies shared by the query and ingest routes.

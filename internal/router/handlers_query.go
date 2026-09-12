@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
+	"github.com/fahimbagar/product-rag-search/internal/ctxlog"
 )
 
 func (h handler) query() http.HandlerFunc {

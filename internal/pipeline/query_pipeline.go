@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/fahimbagar/product-rag-search/internal/ctxlog"
 	"github.com/fahimbagar/product-rag-search/internal/embeddings"
 	"github.com/fahimbagar/product-rag-search/internal/intent"
 	"github.com/fahimbagar/product-rag-search/internal/llm"
@@ -18,7 +19,6 @@ import (
 	"github.com/fahimbagar/product-rag-search/internal/rerank"
 	"github.com/fahimbagar/product-rag-search/internal/retrieval"
 	"github.com/fahimbagar/product-rag-search/internal/store"
-	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
 )
 
 // Config tunes how many candidates each retrieval source returns and how

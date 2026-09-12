@@ -14,8 +14,8 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/fahimbagar/product-rag-search/internal/app"
+	"github.com/fahimbagar/product-rag-search/internal/ctxlog"
 	"github.com/fahimbagar/product-rag-search/internal/ingestion"
-	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
 )
 
 type seedProduct struct {

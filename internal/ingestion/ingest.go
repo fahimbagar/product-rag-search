@@ -6,10 +6,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fahimbagar/product-rag-search/internal/ctxlog"
 	"github.com/fahimbagar/product-rag-search/internal/embeddings"
 	"github.com/fahimbagar/product-rag-search/internal/retrieval/graph"
 	"github.com/fahimbagar/product-rag-search/internal/store"
-	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
 )
 
 // RawProduct is the input shape for a single product before embedding or

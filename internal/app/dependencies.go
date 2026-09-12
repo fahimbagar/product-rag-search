@@ -9,6 +9,7 @@ import (
 
 	"github.com/fahimbagar/product-rag-search/internal/config"
 	embedgemini "github.com/fahimbagar/product-rag-search/internal/embeddings/gemini"
+	"github.com/fahimbagar/product-rag-search/internal/healthcheck"
 	"github.com/fahimbagar/product-rag-search/internal/ingestion"
 	llmgemini "github.com/fahimbagar/product-rag-search/internal/llm/gemini"
 	"github.com/fahimbagar/product-rag-search/internal/pipeline"
@@ -18,7 +19,6 @@ import (
 	"github.com/fahimbagar/product-rag-search/internal/retrieval/graph"
 	"github.com/fahimbagar/product-rag-search/internal/retrieval/vector"
 	"github.com/fahimbagar/product-rag-search/internal/store/postgres"
-	"github.com/fahimbagar/product-rag-search/pkg/healthcheck"
 )
 
 // Dependencies holds the concrete, already-wired components shared by the
