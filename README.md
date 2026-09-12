@@ -21,7 +21,7 @@ and grounded, cited answer generation.
 |---|---|---|
 | Language / API | Go, `net/http` (stdlib mux) | Single deployable binary, no framework needed at this size |
 | Vector store | Postgres + pgvector | Cosine similarity search on the `products.embedding` column |
-| Graph store | Postgres + Apache AGE | Cypher traversal on `product_graph`, same database as pgvector — one instance to operate, not two |
+| Graph store | Postgres + Apache AGE | Cypher traversal on `product_graph`, same database as pgvector (one instance to operate, not two) |
 | Keyword search | Postgres full-text (`tsvector`/`ts_rank`) | Third retrieval signal, no extra service |
 | Intent classification | Gemini (`gemini-3.5-flash-lite`) | Cheap/fast structured JSON output, permanent free tier |
 | Answer generation | Gemini (`gemini-3.8-flash`) | Structured-output generation with self-reported product citations |
@@ -47,9 +47,9 @@ POST /query
   │
   ▼
 3. fan out concurrently (internal/retrieval/*):
-     vector.Search    — pgvector cosine similarity
-     fulltext.Search  — Postgres ts_rank
-     graph.Search     — AGE Cypher, seeded from vector hits + classifier entities
+     vector.Search    : pgvector cosine similarity
+     fulltext.Search  : Postgres ts_rank
+     graph.Search     : AGE Cypher, seeded from vector hits + classifier entities
   │
   ▼
 4. rerank.Rerank (internal/rerank/rrf)               Reciprocal Rank Fusion:
@@ -74,24 +74,24 @@ edges) → wire up any curated `RELATED_TO` edges between products.
 
 ## Package layout
 
-- `internal/intent` — intent enum, entities, `Classifier` interface
-- `internal/embeddings` (+ `gemini/`) — `Embedder` interface and its Gemini implementation
-- `internal/llm` (+ `gemini/`) — `ProductDoc`/`Answer` types, `Generator` interface, and the
+- `internal/intent`: intent enum, entities, `Classifier` interface
+- `internal/embeddings` (+ `gemini/`): `Embedder` interface and its Gemini implementation
+- `internal/llm` (+ `gemini/`): `ProductDoc`/`Answer` types, `Generator` interface, and the
   Gemini implementation (also implements `intent.Classifier`)
-- `internal/retrieval` (+ `vector/`, `fulltext/`, `graph/`) — `Candidate`/`Query` types,
+- `internal/retrieval` (+ `vector/`, `fulltext/`, `graph/`): `Candidate`/`Query` types,
   `Source` interface, and its three implementations
-- `internal/rerank` (+ `rrf/`) — `Reranker` interface and the RRF implementation
-- `internal/store` (+ `postgres/`) — `Product` domain type, `ProductRepository` interface,
+- `internal/rerank` (+ `rrf/`): `Reranker` interface and the RRF implementation
+- `internal/store` (+ `postgres/`): `Product` domain type, `ProductRepository` interface,
   and the Postgres implementation (pgxpool, AGE session setup)
-- `internal/ingestion` — embed → insert → graph-edge orchestration
-- `internal/pipeline` — the query flow above, wired from interfaces so every stage is swappable
-- `internal/router` — HTTP handlers (`/health`, `/query`, `/ingest`) and middleware
-- `cmd/{server,migrate,seed}` — entrypoints
+- `internal/ingestion`: embed, insert, then wire graph edges
+- `internal/pipeline`: the query flow above, wired from interfaces so every stage is swappable
+- `internal/router`: HTTP handlers (`/health`, `/query`, `/ingest`) and middleware
+- `cmd/{server,migrate,seed}`: entrypoints
 
 Every cross-cutting seam (embeddings, intent classification, generation, each retrieval
 signal, re-ranking, product storage) is an interface with exactly one implementation
 today. Swapping a provider or algorithm means adding a new implementation, not touching
-callers — see [Future improvements](#future-improvements) for concrete candidates.
+callers. See [Future improvements](#future-improvements) for concrete candidates.
 
 ## Setup
 
@@ -136,7 +136,7 @@ same shape as `seed/products.json`:
 
 ## Monitoring & evaluation
 
-**Runtime metrics** (`GET /metrics`, Prometheus format, no auth — same as `/health`):
+**Runtime metrics** (`GET /metrics`, Prometheus format, unauthenticated like `/health`):
 HTTP request rate/latency/errors, per-pipeline-stage latency (classify, embed,
 each retrieval source, rerank, hydrate, generate, deflect), which retrieval
 signal(s) contributed each final result, self-reported citation valid vs.
@@ -144,7 +144,7 @@ hallucinated counts, Gemini token usage, and intent classification counts.
 
 - Prometheus: http://localhost:9090 (scrapes `app:8080/metrics` every 15s)
 - Grafana: http://localhost:3000 (anonymous viewer access; auto-provisioned
-  "Product RAG Search" dashboard, datasource pre-configured — no manual setup)
+  "Product RAG Search" dashboard, datasource pre-configured, no manual setup)
 
 **Offline evals** (`integration_tests/`, behind the `integration` build
 tag, need a live seeded Postgres + a real `GEMINI_API_KEY`):
@@ -155,15 +155,16 @@ export GEMINI_API_KEY='...'
 go test -tags=integration ./integration_tests/... -v
 ```
 
-- `retrieval_eval_test.go` — golden query → expected product titles (matched
-  by title, not ID, since seed IDs are regenerated every run), scored as
-  recall@FinalTopN against the real vector+fulltext+graph+RRF pipeline.
-- `intent_eval_test.go` — golden query → expected intent, scored as accuracy
-  against the real Gemini classifier.
+- `retrieval_eval_test.go`: maps a golden query to expected product titles
+  (matched by title, not ID, since seed IDs are regenerated every run),
+  scored as recall@FinalTopN against the real vector+fulltext+graph+RRF
+  pipeline.
+- `intent_eval_test.go`: maps a golden query to an expected intent, scored
+  as accuracy against the real Gemini classifier.
 
-Both fail the run if the aggregate score drops below a threshold
-(`minRetrievalRecall`, `minIntentAccuracy`) — regression gates, not just
-dashboard numbers.
+Both tests fail the run when the aggregate score drops below a threshold
+(`minRetrievalRecall`, `minIntentAccuracy`), so a retrieval or classifier
+regression blocks CI.
 
 See [docs/FUTURE-IMPROVEMENTS.md](docs/FUTURE-IMPROVEMENTS.md) for what these
 five areas do *not* cover (faithfulness/correctness of the generated answer
@@ -180,7 +181,7 @@ Unit tests use table-driven cases with `testify/assert`
 
 ## Future improvements
 
-See [docs/FUTURE-IMPROVEMENTS.md](docs/FUTURE-IMPROVEMENTS.md) — alternative
+See [docs/FUTURE-IMPROVEMENTS.md](docs/FUTURE-IMPROVEMENTS.md) for alternative
 LLM/embeddings providers (and the citation-verification tradeoff involved),
 integration tests, reranker swaps, auth hardening, and observability.
 
