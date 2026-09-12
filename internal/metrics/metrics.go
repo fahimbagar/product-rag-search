@@ -31,8 +31,8 @@ var (
 	}, []string{"stage"})
 
 	// RetrievalSignalContribution counts, per final top-N result, which
-	// retrieval source(s) (vector, fulltext, graph) surfaced it -- a
-	// result found by multiple signals increments each of them.
+	// retrieval source(s) (vector, fulltext, graph) surfaced it. A result
+	// found by multiple signals increments each of them.
 	RetrievalSignalContribution = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "retrieval_signal_contribution_total",
 		Help: "Count of final top-N results each retrieval signal contributed to, by source.",

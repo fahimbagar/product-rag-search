@@ -16,8 +16,8 @@ type ProductDoc struct {
 	Attributes  map[string]any
 }
 
-// Answer is a generated response plus the subset of product IDs it actually
-// cited, so callers can mark which candidates were used.
+// Answer is a generated response plus the subset of product IDs it cited,
+// so callers can mark which candidates were used.
 type Answer struct {
 	Text            string
 	CitedProductIDs []string

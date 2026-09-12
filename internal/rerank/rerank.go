@@ -9,8 +9,8 @@ import (
 )
 
 // Reranker fuses one ranked candidate list per retrieval signal into a
-// single ranked list. Implementations are swappable — RRF today, an
-// LLM/cross-encoder reranker later — without changing callers.
+// single ranked list. Implementations are swappable: RRF today, an
+// LLM or cross-encoder reranker later, without changing callers.
 type Reranker interface {
 	Rerank(ctx context.Context, query string, signals ...[]retrieval.Candidate) ([]retrieval.Candidate, error)
 }

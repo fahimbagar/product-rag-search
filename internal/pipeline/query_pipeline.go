@@ -60,7 +60,7 @@ func New(
 }
 
 // ProductResult is one product in a query response, with whether the
-// generated answer actually cited it.
+// generated answer cited it.
 type ProductResult struct {
 	ID       string
 	Title    string
@@ -202,8 +202,8 @@ func (p *Pipeline) searchAll(ctx context.Context, q retrieval.Query) ([][]retrie
 }
 
 // recordSignalContribution counts, for each final top-N result, which
-// retrieval signal(s) actually surfaced it -- a result found by multiple
-// signals increments each of them.
+// retrieval signal(s) surfaced it. A result found by multiple signals
+// increments each of them.
 func recordSignalContribution(signals [][]retrieval.Candidate, final []retrieval.Candidate) {
 	foundBy := make(map[string]map[string]bool, len(final))
 	for _, signal := range signals {

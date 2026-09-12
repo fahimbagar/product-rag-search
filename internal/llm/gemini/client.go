@@ -3,7 +3,7 @@
 //
 // Gemini has no equivalent of Claude's citations API (which mechanically
 // verifies which source document backed each span of generated text) for
-// documents supplied inline in a request — its closest feature, File Search,
+// documents supplied inline in a request. Its closest feature, File Search,
 // requires pre-indexing a whole corpus and lets Gemini do its own retrieval,
 // which doesn't fit a pipeline that already does its own hybrid retrieval.
 // So GenerateAnswer asks the model to self-report cited_product_ids via a
@@ -99,7 +99,7 @@ func (c *Client) Classify(ctx context.Context, query string) (intent.Result, err
 
 const answerSystemPrompt = `You are a product search assistant. Answer the user's question using only
 the product documents provided. Set cited_product_ids to the ids of the
-products you actually relied on to answer -- omit any you did not use. If none
+products you relied on to answer, omitting any you did not use. If none
 of the documents answer the question, say so plainly instead of guessing.`
 
 var answerSchema = &genai.Schema{
@@ -141,9 +141,9 @@ func (c *Client) GenerateAnswer(ctx context.Context, query string, docs []llm.Pr
 		return llm.Answer{}, fmt.Errorf("gemini generate answer: parse response: %w", err)
 	}
 
-	// The schema only enforces shape, not truthfulness -- the model could
+	// The schema enforces shape, not truthfulness: the model could
 	// self-report an id we never gave it. Drop anything not in the actual
-	// candidate set; we still can't verify it truly informed the answer text.
+	// candidate set. Even a valid id doesn't prove it informed the answer text.
 	validIDs := make(map[string]bool, len(docs))
 	for _, d := range docs {
 		validIDs[d.ID] = true

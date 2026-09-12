@@ -35,7 +35,7 @@ func ParseVertex(raw string) (Vertex, error) {
 }
 
 // ParseString parses a scalar agtype projection that is a JSON string, e.g.
-// `"abc-123"` (no ::type suffix — only vertex/edge/path literals carry one).
+// `"abc-123"` (no ::type suffix; only vertex/edge/path literals carry one).
 func ParseString(raw string) (string, error) {
 	var s string
 	if err := json.Unmarshal([]byte(raw), &s); err != nil {
