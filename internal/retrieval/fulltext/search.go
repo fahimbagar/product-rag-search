@@ -6,23 +6,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/fahimbagar/product-rag-search/internal/retrieval"
+	"github.com/fahimbagar/product-rag-search/internal/store"
 )
-
-// pgxIface is the subset of *pgxpool.Pool that Searcher needs, so tests can
-// substitute a pgxmock pool instead of a real database.
-type pgxIface interface {
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-}
 
 // Searcher implements retrieval.Source via Postgres full-text search.
 type Searcher struct {
-	pool pgxIface
+	pool store.DB
 }
 
-func NewSearcher(pool pgxIface) *Searcher {
+func NewSearcher(pool store.DB) *Searcher {
 	return &Searcher{pool: pool}
 }
 

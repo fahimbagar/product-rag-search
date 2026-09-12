@@ -11,19 +11,12 @@ import (
 	"github.com/fahimbagar/product-rag-search/internal/store"
 )
 
-// pgxIface is the subset of *pgxpool.Pool that ProductStore needs, so tests
-// can substitute a pgxmock pool instead of a real database.
-type pgxIface interface {
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
-
 // ProductStore implements store.ProductRepository against Postgres.
 type ProductStore struct {
-	pool pgxIface
+	pool store.DB
 }
 
-func NewProductStore(pool pgxIface) *ProductStore {
+func NewProductStore(pool store.DB) *ProductStore {
 	return &ProductStore{pool: pool}
 }
 
