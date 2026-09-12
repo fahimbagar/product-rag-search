@@ -14,16 +14,16 @@ coincidental rank agreement apart from genuine relevance.
 better-quality reranker can be swapped in later without touching the
 pipeline. The candidates, in increasing order of quality and cost:
 
-**Hosted cross-encoder rerank APIs.** A cross-encoder processes the query
-and each candidate document's text (title, description, attributes)
-together, not just its rank position, so it can judge relevance instead of
-agreement between signals. Two managed options fit our `Reranker` interface
-as a drop-in (query and documents in, reranked scores out):
+**Hosted cross-encoder rerank APIs.** A cross-encoder judges relevance by
+reading the query alongside each candidate document's own text (title,
+description, attributes), rather than only the agreement between signals'
+rank positions. Two managed options fit our `Reranker` interface as a
+drop-in (query and documents in, reranked scores out):
 
-- **Voyage AI rerank** (`rerank-2.5` / `rerank-3`): a different vendor than
+- Voyage AI rerank (`rerank-2.5` / `rerank-3`): a different vendor than
   our current Gemini embeddings, but the same "call an API, get scores
   back" shape.
-- **Cohere Rerank** (`rerank-v4.0-pro` / `-fast`): same shape, different
+- Cohere Rerank (`rerank-v4.0-pro` / `-fast`): same shape, different
   vendor.
 
 Both require an extra API key and a network call per query (added latency
