@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/fahimbagar/product-rag-search/internal/pipeline"
 	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
 )
 
-func handleQuery(p *pipeline.Pipeline) http.HandlerFunc {
+func (h handler) query() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req queryRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -20,7 +19,7 @@ func handleQuery(p *pipeline.Pipeline) http.HandlerFunc {
 			return
 		}
 
-		result, err := p.Query(r.Context(), req.Query)
+		result, err := h.pipeline.Query(r.Context(), req.Query)
 		if err != nil {
 			ctxlog.FromContext(r.Context()).Errorw("query failed", "error", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)

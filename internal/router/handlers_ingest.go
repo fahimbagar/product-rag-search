@@ -28,9 +28,9 @@ type ingestRequest struct {
 	Relations []ingestRelation `json:"relations"`
 }
 
-func handleIngest(ingester *ingestion.Ingester, adminToken string) http.HandlerFunc {
+func (h handler) ingest() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if adminToken == "" || r.Header.Get("Authorization") != "Bearer "+adminToken {
+		if h.adminToken == "" || r.Header.Get("Authorization") != "Bearer "+h.adminToken {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -61,7 +61,7 @@ func handleIngest(ingester *ingestion.Ingester, adminToken string) http.HandlerF
 			related[i] = ingestion.RelatedPair{FromIndex: rel.FromIndex, ToIndex: rel.ToIndex, Weight: rel.Weight}
 		}
 
-		if err := ingester.Ingest(r.Context(), raw, related); err != nil {
+		if err := h.ingester.Ingest(r.Context(), raw, related); err != nil {
 			ctxlog.FromContext(r.Context()).Errorw("ingest failed", "error", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
