@@ -22,7 +22,7 @@ func handleQuery(p *pipeline.Pipeline) http.HandlerFunc {
 
 		result, err := p.Query(r.Context(), req.Query)
 		if err != nil {
-			ctxlog.FromContext(r.Context()).Error("query failed", "error", err)
+			ctxlog.FromContext(r.Context()).Errorw("query failed", "error", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}

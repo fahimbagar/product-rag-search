@@ -8,8 +8,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log/slog"
 	"os"
+
+	"go.uber.org/zap"
 
 	"github.com/fahimbagar/product-rag-search/internal/app"
 	"github.com/fahimbagar/product-rag-search/internal/ingestion"
@@ -36,14 +37,22 @@ type seedFile struct {
 }
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	zapCfg := zap.NewProductionConfig()
+	zapCfg.OutputPaths = []string{"stdout"}
+	zapLogger, err := zapCfg.Build()
+	if err != nil {
+		os.Exit(1)
+	}
+	defer zapLogger.Sync()
+	logger := zapLogger.Sugar()
+
 	if err := run(logger); err != nil {
-		logger.Error("seed failed", "error", err)
+		logger.Errorw("seed failed", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run(logger *slog.Logger) error {
+func run(logger *zap.SugaredLogger) error {
 	file := flag.String("file", "seed/products.json", "path to seed JSON file")
 	flag.Parse()
 
@@ -83,6 +92,6 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("ingest: %w", err)
 	}
 
-	logger.Info("seed complete", "products", len(raw), "relations", len(related))
+	logger.Infow("seed complete", "products", len(raw), "relations", len(related))
 	return nil
 }

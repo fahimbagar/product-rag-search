@@ -62,7 +62,7 @@ func handleIngest(ingester *ingestion.Ingester, adminToken string) http.HandlerF
 		}
 
 		if err := ingester.Ingest(r.Context(), raw, related); err != nil {
-			ctxlog.FromContext(r.Context()).Error("ingest failed", "error", err)
+			ctxlog.FromContext(r.Context()).Errorw("ingest failed", "error", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}

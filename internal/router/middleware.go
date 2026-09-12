@@ -1,12 +1,12 @@
 package router
 
 import (
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/fahimbagar/product-rag-search/internal/metrics"
 	"github.com/fahimbagar/product-rag-search/pkg/ctxlog"
@@ -22,7 +22,7 @@ func (r *statusRecorder) WriteHeader(status int) {
 	r.ResponseWriter.WriteHeader(status)
 }
 
-func withMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
+func withMiddleware(logger *zap.SugaredLogger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := uuid.NewString()
@@ -34,11 +34,11 @@ func withMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 			start := time.Now()
 			defer func() {
 				if rr := recover(); rr != nil {
-					reqLogger.Error("panic recovered", "panic", rr)
+					reqLogger.Errorw("panic recovered", "panic", rr)
 					http.Error(rec, "internal server error", http.StatusInternalServerError)
 				}
 				duration := time.Since(start)
-				reqLogger.Info("request",
+				reqLogger.Infow("request",
 					"method", r.Method,
 					"path", r.URL.Path,
 					"status", rec.status,

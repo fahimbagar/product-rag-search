@@ -3,10 +3,11 @@ package config
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"strconv"
 	"strings"
+
+	"go.uber.org/zap/zapcore"
 )
 
 // Config holds the service's environment-derived settings: database and
@@ -20,7 +21,7 @@ type Config struct {
 	GeminiEmbeddingModel string
 
 	HTTPAddr string
-	LogLevel slog.Level
+	LogLevel zapcore.Level
 
 	RRFK          int
 	RetrievalTopK int
@@ -70,16 +71,16 @@ func getEnvDefault(key, def string) string {
 	return def
 }
 
-func parseLogLevel(v string) (slog.Level, error) {
+func parseLogLevel(v string) (zapcore.Level, error) {
 	switch strings.ToLower(v) {
 	case "debug":
-		return slog.LevelDebug, nil
+		return zapcore.DebugLevel, nil
 	case "info":
-		return slog.LevelInfo, nil
+		return zapcore.InfoLevel, nil
 	case "warn", "warning":
-		return slog.LevelWarn, nil
+		return zapcore.WarnLevel, nil
 	case "error":
-		return slog.LevelError, nil
+		return zapcore.ErrorLevel, nil
 	default:
 		return 0, fmt.Errorf("config: invalid LOG_LEVEL %q (want debug, info, warn, or error)", v)
 	}

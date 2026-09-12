@@ -5,21 +5,22 @@ package ctxlog
 
 import (
 	"context"
-	"log/slog"
+
+	"go.uber.org/zap"
 )
 
 type contextKey struct{}
 
 // WithLogger returns a copy of ctx carrying logger.
-func WithLogger(ctx context.Context, logger *slog.Logger) context.Context {
+func WithLogger(ctx context.Context, logger *zap.SugaredLogger) context.Context {
 	return context.WithValue(ctx, contextKey{}, logger)
 }
 
-// FromContext returns the logger carried by ctx, or slog.Default() if ctx
+// FromContext returns the logger carried by ctx, or a no-op logger if ctx
 // carries none.
-func FromContext(ctx context.Context) *slog.Logger {
-	if logger, ok := ctx.Value(contextKey{}).(*slog.Logger); ok {
+func FromContext(ctx context.Context) *zap.SugaredLogger {
+	if logger, ok := ctx.Value(contextKey{}).(*zap.SugaredLogger); ok {
 		return logger
 	}
-	return slog.Default()
+	return zap.NewNop().Sugar()
 }

@@ -2,11 +2,11 @@
 package router
 
 import (
-	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 
 	"github.com/fahimbagar/product-rag-search/internal/ingestion"
 	"github.com/fahimbagar/product-rag-search/internal/pipeline"
@@ -14,7 +14,7 @@ import (
 )
 
 // New builds the HTTP handler for the service.
-func New(logger *slog.Logger, hc *healthcheck.HealthCheck, p *pipeline.Pipeline, ingester *ingestion.Ingester, adminToken string) http.Handler {
+func New(logger *zap.SugaredLogger, hc *healthcheck.HealthCheck, p *pipeline.Pipeline, ingester *ingestion.Ingester, adminToken string) http.Handler {
 	r := chi.NewRouter()
 	r.Use(withMiddleware(logger))
 

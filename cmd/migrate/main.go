@@ -5,22 +5,29 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"go.uber.org/zap"
 )
 
 func main() {
-	if err := run(); err != nil {
-		slog.Error("migrate failed", "error", err)
+	logger, err := zap.NewProduction()
+	if err != nil {
+		os.Exit(1)
+	}
+	defer logger.Sync()
+	sugar := logger.Sugar()
+
+	if err := run(sugar); err != nil {
+		sugar.Errorw("migrate failed", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
+func run(logger *zap.SugaredLogger) error {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		return fmt.Errorf("DATABASE_URL is required")
@@ -41,7 +48,7 @@ func run() error {
 	}
 	defer func() {
 		if srcErr, dbErr := m.Close(); srcErr != nil || dbErr != nil {
-			slog.Error("migrate: close", "source_error", srcErr, "database_error", dbErr)
+			logger.Errorw("migrate: close", "source_error", srcErr, "database_error", dbErr)
 		}
 	}()
 
@@ -58,6 +65,6 @@ func run() error {
 		return fmt.Errorf("migrate %s: %w", direction, err)
 	}
 
-	slog.Info("migrations applied", "direction", direction)
+	logger.Infow("migrations applied", "direction", direction)
 	return nil
 }
