@@ -14,11 +14,10 @@ import (
 type Config struct {
 	DatabaseURL string
 
-	GeminiAPIKey             string
-	GeminiIntentModel        string
-	GeminiAnswerModel        string
-	GeminiEmbeddingModel     string
-	GeminiEmbeddingDimension int
+	GeminiAPIKey         string
+	GeminiIntentModel    string
+	GeminiAnswerModel    string
+	GeminiEmbeddingModel string
 
 	HTTPAddr string
 	LogLevel slog.Level
@@ -54,9 +53,6 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	if cfg.FinalTopN, err = getEnvIntDefault("FINAL_TOP_N", 5); err != nil {
-		return Config{}, err
-	}
-	if cfg.GeminiEmbeddingDimension, err = getEnvIntDefault("GEMINI_EMBEDDING_DIMENSION", 1536); err != nil {
 		return Config{}, err
 	}
 

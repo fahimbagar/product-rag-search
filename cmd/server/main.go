@@ -49,7 +49,7 @@ func run(logger *slog.Logger, cfg config.Config) error {
 	}
 	defer db.Close()
 
-	embedder, err := embedgemini.NewClient(ctx, cfg.GeminiAPIKey, cfg.GeminiEmbeddingModel, cfg.GeminiEmbeddingDimension)
+	embedder, err := embedgemini.NewClient(ctx, cfg.GeminiAPIKey, cfg.GeminiEmbeddingModel)
 	if err != nil {
 		return err
 	}

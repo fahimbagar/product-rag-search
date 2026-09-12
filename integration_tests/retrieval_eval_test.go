@@ -61,7 +61,7 @@ func TestRetrievalGoldenSet(t *testing.T) {
 	}
 	defer db.Close()
 
-	embedder, err := gemini.NewClient(ctx, cfg.GeminiAPIKey, cfg.GeminiEmbeddingModel, cfg.GeminiEmbeddingDimension)
+	embedder, err := gemini.NewClient(ctx, cfg.GeminiAPIKey, cfg.GeminiEmbeddingModel)
 	if err != nil {
 		t.Fatalf("gemini embeddings client: %v", err)
 	}

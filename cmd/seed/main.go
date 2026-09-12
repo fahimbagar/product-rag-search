@@ -71,7 +71,7 @@ func run(logger *slog.Logger) error {
 	}
 	defer db.Close()
 
-	embedder, err := gemini.NewClient(ctx, cfg.GeminiAPIKey, cfg.GeminiEmbeddingModel, cfg.GeminiEmbeddingDimension)
+	embedder, err := gemini.NewClient(ctx, cfg.GeminiAPIKey, cfg.GeminiEmbeddingModel)
 	if err != nil {
 		return err
 	}
