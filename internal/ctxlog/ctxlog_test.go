@@ -12,12 +12,12 @@ import (
 func TestWithLogger_FromContext_RoundTrip(t *testing.T) {
 	t.Parallel()
 
-	want := zap.NewExample().Sugar()
-	ctx := WithLogger(context.Background(), want)
+	expected := zap.NewExample().Sugar()
+	ctx := WithLogger(context.Background(), expected)
 
 	got := FromContext(ctx)
 
-	assert.Same(t, want, got)
+	assert.Same(t, expected, got)
 }
 
 func TestFromContext_NoLoggerAttached(t *testing.T) {

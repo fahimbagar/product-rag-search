@@ -24,22 +24,22 @@ func TestHandler(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		pingErr    error
-		wantStatus int
-		wantBody   string
+		name           string
+		pingErr        error
+		expectedStatus int
+		expectedBody   string
 	}{
 		{
-			name:       "healthy",
-			pingErr:    nil,
-			wantStatus: http.StatusOK,
-			wantBody:   `{"status":"ok"}`,
+			name:           "healthy",
+			pingErr:        nil,
+			expectedStatus: http.StatusOK,
+			expectedBody:   `{"status":"ok"}`,
 		},
 		{
-			name:       "unavailable",
-			pingErr:    errors.New("connection refused"),
-			wantStatus: http.StatusServiceUnavailable,
-			wantBody:   `{"status":"unavailable"}`,
+			name:           "unavailable",
+			pingErr:        errors.New("connection refused"),
+			expectedStatus: http.StatusServiceUnavailable,
+			expectedBody:   `{"status":"unavailable"}`,
 		},
 	}
 
@@ -52,9 +52,9 @@ func TestHandler(t *testing.T) {
 			rec := httptest.NewRecorder()
 			New(pinger).Handler()(rec, req)
 
-			assert.Equal(t, tt.wantStatus, rec.Code)
+			assert.Equal(t, tt.expectedStatus, rec.Code)
 			assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
-			assert.JSONEq(t, tt.wantBody, rec.Body.String())
+			assert.JSONEq(t, tt.expectedBody, rec.Body.String())
 			pinger.AssertExpectations(t)
 		})
 	}
