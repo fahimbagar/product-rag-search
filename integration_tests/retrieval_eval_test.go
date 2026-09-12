@@ -46,9 +46,9 @@ var retrievalGoldenSet = []struct {
 }
 
 // minRetrievalRecall is the aggregate recall@FinalTopN this eval must clear
-// to pass; a regression in retrieval quality (bad embeddings, a broken
-// signal, a bad RRF constant) should fail CI, not just look worse on a
-// dashboard.
+// to pass. A regression in retrieval quality (bad embeddings, a broken
+// signal, a bad RRF constant) fails CI instead of only showing up as a
+// lower number on a dashboard.
 const minRetrievalRecall = 0.6
 
 func TestRetrievalGoldenSet(t *testing.T) {

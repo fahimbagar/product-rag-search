@@ -20,8 +20,8 @@ const (
 )
 
 // Entities are structured hints extracted from the query alongside the
-// intent label, used to seed graph traversal directly (not just via vector
-// hits).
+// intent label. The pipeline uses them to seed graph traversal directly,
+// in addition to seeding it from vector hits.
 type Entities struct {
 	Brand      string   `json:"brand"`
 	Category   string   `json:"category"`
