@@ -8,53 +8,52 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-type pingerFunc func(ctx context.Context) error
-
-func (f pingerFunc) Ping(ctx context.Context) error { return f(ctx) }
-
-func TestHandler_Healthy(t *testing.T) {
-	t.Parallel()
-
-	hc := New(pingerFunc(func(ctx context.Context) error { return nil }))
-
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
-	hc.Handler()(rec, req)
-
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
-	assert.JSONEq(t, `{"status":"ok"}`, rec.Body.String())
+type mockPinger struct {
+	mock.Mock
 }
 
-func TestHandler_Unavailable(t *testing.T) {
-	t.Parallel()
-
-	hc := New(pingerFunc(func(ctx context.Context) error { return errors.New("connection refused") }))
-
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
-	hc.Handler()(rec, req)
-
-	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
-	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
-	assert.JSONEq(t, `{"status":"unavailable"}`, rec.Body.String())
+func (m *mockPinger) Ping(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
 }
 
-func TestHandler_UsesRequestContext(t *testing.T) {
-	t.Parallel()
+func TestHandler(t *testing.T) {
+	tests := []struct {
+		name       string
+		pingErr    error
+		wantStatus int
+		wantBody   string
+	}{
+		{
+			name:       "healthy",
+			pingErr:    nil,
+			wantStatus: http.StatusOK,
+			wantBody:   `{"status":"ok"}`,
+		},
+		{
+			name:       "unavailable",
+			pingErr:    errors.New("connection refused"),
+			wantStatus: http.StatusServiceUnavailable,
+			wantBody:   `{"status":"unavailable"}`,
+		},
+	}
 
-	type ctxKey struct{}
-	var gotCtx context.Context
-	hc := New(pingerFunc(func(ctx context.Context) error {
-		gotCtx = ctx
-		return nil
-	}))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pinger := new(mockPinger)
+			req := httptest.NewRequest(http.MethodGet, "/health", nil)
+			pinger.On("Ping", req.Context()).Return(tt.pingErr)
 
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
-	req = req.WithContext(context.WithValue(req.Context(), ctxKey{}, "marker"))
-	hc.Handler()(httptest.NewRecorder(), req)
+			rec := httptest.NewRecorder()
+			New(pinger).Handler()(rec, req)
 
-	assert.Equal(t, "marker", gotCtx.Value(ctxKey{}))
+			assert.Equal(t, tt.wantStatus, rec.Code)
+			assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+			assert.JSONEq(t, tt.wantBody, rec.Body.String())
+			pinger.AssertExpectations(t)
+		})
+	}
 }

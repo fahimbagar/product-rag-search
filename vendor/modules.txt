@@ -156,12 +156,16 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
+# github.com/stretchr/objx v0.5.3
+## explicit; go 1.20
+github.com/stretchr/objx
 # github.com/stretchr/testify v1.12.1
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
 github.com/stretchr/testify/internal/difflib
 github.com/stretchr/testify/internal/spew
+github.com/stretchr/testify/mock
 github.com/stretchr/testify/require
 # go.opentelemetry.io/auto/sdk v1.2.1
 ## explicit; go 1.24.0
