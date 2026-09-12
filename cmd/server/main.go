@@ -37,7 +37,7 @@ func main() {
 func run(ctx context.Context, logger *slog.Logger, deps *app.Dependencies) error {
 	cfg := deps.Config
 
-	handler := router.New(logger, deps.DB, deps.Pipeline, deps.Ingester, cfg.AdminToken)
+	handler := router.New(logger, deps.HealthCheck, deps.Pipeline, deps.Ingester, cfg.AdminToken)
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           handler,

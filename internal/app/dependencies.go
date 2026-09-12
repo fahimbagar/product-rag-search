@@ -18,21 +18,24 @@ import (
 	"github.com/fahimbagar/product-rag-search/internal/retrieval/graph"
 	"github.com/fahimbagar/product-rag-search/internal/retrieval/vector"
 	"github.com/fahimbagar/product-rag-search/internal/store/postgres"
+	"github.com/fahimbagar/product-rag-search/pkg/healthcheck"
 )
 
 // Dependencies holds the concrete, already-wired components shared by the
-// server and seed commands: DB pool, Gemini clients, stores, and the
-// query pipeline and ingester built from them.
+// server and seed commands: Gemini clients, stores, and the query pipeline
+// and ingester built from them.
 type Dependencies struct {
 	Config config.Config
 
-	DB       *pgxpool.Pool
-	Embedder *embedgemini.Client
-	LLM      *llmgemini.Client
-	Products *postgres.ProductStore
-	Graph    *graph.Store
-	Pipeline *pipeline.Pipeline
-	Ingester *ingestion.Ingester
+	HealthCheck *healthcheck.HealthCheck
+	Embedder    *embedgemini.Client
+	LLM         *llmgemini.Client
+	Products    *postgres.ProductStore
+	Graph       *graph.Store
+	Pipeline    *pipeline.Pipeline
+	Ingester    *ingestion.Ingester
+
+	db *pgxpool.Pool
 }
 
 // Load reads configuration from the environment and instantiates all
@@ -83,18 +86,19 @@ func Load(ctx context.Context) (*Dependencies, error) {
 	ingester := ingestion.NewIngester(embedder, products, graphStore)
 
 	return &Dependencies{
-		Config:   cfg,
-		DB:       db,
-		Embedder: embedder,
-		LLM:      llmClient,
-		Products: products,
-		Graph:    graphStore,
-		Pipeline: p,
-		Ingester: ingester,
+		Config:      cfg,
+		HealthCheck: healthcheck.New(db),
+		Embedder:    embedder,
+		LLM:         llmClient,
+		Products:    products,
+		Graph:       graphStore,
+		Pipeline:    p,
+		Ingester:    ingester,
+		db:          db,
 	}, nil
 }
 
 // Close releases resources held by Dependencies.
 func (d *Dependencies) Close() {
-	d.DB.Close()
+	d.db.Close()
 }

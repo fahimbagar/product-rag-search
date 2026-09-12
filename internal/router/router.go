@@ -14,11 +14,11 @@ import (
 )
 
 // New builds the HTTP handler for the service.
-func New(logger *slog.Logger, pinger healthcheck.Pinger, p *pipeline.Pipeline, ingester *ingestion.Ingester, adminToken string) http.Handler {
+func New(logger *slog.Logger, hc *healthcheck.HealthCheck, p *pipeline.Pipeline, ingester *ingestion.Ingester, adminToken string) http.Handler {
 	r := chi.NewRouter()
 	r.Use(withMiddleware(logger))
 
-	r.Get("/health", healthcheck.Handler(pinger))
+	r.Get("/health", hc.Handler())
 	r.Post("/query", handleQuery(logger, p))
 	r.Post("/ingest", handleIngest(logger, ingester, adminToken))
 	r.Handle("/metrics", promhttp.Handler())
