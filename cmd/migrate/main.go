@@ -18,7 +18,9 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-	defer logger.Sync()
+	defer func() {
+		_ = logger.Sync()
+	}()
 	sugar := logger.Sugar()
 
 	if err := run(sugar); err != nil {
