@@ -12,8 +12,8 @@ and grounded, cited answer generation.
 > LLM generation, metrics/eval) end to end, but skips things a real
 > deployment would need: `/ingest` auth is a single static bearer token,
 > there's no rate limiting or multi-tenant isolation, the seed catalog is
-> 24 fake products, and generated-answer faithfulness/correctness isn't
-> verified (see [docs/FUTURE-IMPROVEMENTS.md](docs/FUTURE-IMPROVEMENTS.md)).
+> 24 fake products, no index tuning, and generated-answer faithfulness/correctness
+> isn't verified (see [docs/FUTURE-IMPROVEMENTS.md](docs/FUTURE-IMPROVEMENTS.md)).
 
 ## Stack
 

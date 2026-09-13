@@ -29,9 +29,8 @@ differences in recall or latency.
 past what a single Postgres instance's HNSW index handles well and add
 native metadata filtering, but each is a separate service to run and
 operate. The same "one Postgres instance for vector and graph" rationale
-that keeps Apache AGE alongside pgvector (see the Stack table in the
-README) argues against this until pgvector's own ceiling becomes the actual
-bottleneck.
+that keeps Apache AGE alongside pgvector (see the [Stack](../README.md#stack))
+argues against this until pgvector's own ceiling becomes the actual bottleneck.
 
 **Swapping the embedding model** is a smaller, more likely change:
 `embeddings.Embedder` is already an interface (see
@@ -81,8 +80,8 @@ string interpolation (AGE has no official Go client and its own parameter
 binding is unreliable across versions, per the package doc), guarded by a
 UUID regex, a label allowlist regex, and manual escaping. `IN_CATEGORY`,
 `BY_BRAND`, and `HAS_ATTRIBUTE` edges score by hop count; `RELATED_TO`
-edges score by curated `weight` on direct matches only (see the README's
-"Graph proximity scoring" section for why weight doesn't extend across
+edges score by curated `weight` on direct matches only (see the
+["Graph proximity scoring"](../README.md#architecture) section for why weight doesn't extend across
 multi-hop paths).
 
 **No index exists on the traversed properties.** `0002_age_graph.up.sql`
